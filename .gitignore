@@ -1,0 +1,8 @@
+
+*.suo
+/RunnersPal/bin
+/RunnersPal/obj
+/RunnersPal.Tests/obj
+/RunnersPal.Tests/bin
+/RunnersPal.Web/obj
+/RunnersPal.Web/bin
