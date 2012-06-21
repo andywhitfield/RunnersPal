@@ -1,0 +1,45 @@
+﻿@{ ViewBag.Title = "Getting Started"; }
+
+<h1>runners:pal</h1>
+
+<p>
+Have you started to get into running and would like to track where you've been and how long
+it took you? Want to see how many calories you burnt on your last workout? Or you do simply
+want to work out how many miles are in that upcoming 5K race? It's all here...
+</p>
+
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><h4>Run:Log</h4><a href="@Url.Action("", "runlog")"><img src="@Url.Content("~/Content/log.png")" alt="Run:Log" /></a></div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20"><h4>Route:Pal</h4><a href="@Url.Action("", "routepal")"><img src="@Url.Content("~/Content/map.png")" alt="Route:Pal" /></a></div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20"><h4>My:Stats</h4><a href="@Url.Action("", "user")"><img src="@Url.Content("~/Content/stats.png")" alt="My:Stats" /></a></div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20"><h4>Calculators</h4><a href="@Url.Action("", "calculators")"><img src="@Url.Content("~/Content/calc.png")" alt="Calculators" /></a></div>
+        <div class="grid-cell-last grid-cell-5">&nbsp;</div>
+		<div class="grid-cell-end"></div>
+	</div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">
+            Keep track of your runs in a simple calendar log. You just enter the distance of
+            your workout - or map a route - and the time it took.
+        </div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20">
+            Plot your route on a map to work out the distance you run during your workouts.
+            This makes logging your runs a piece of cake.
+        </div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20">
+            View your progress as you go further and faster!
+        </div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-20">
+            Use the calculators to work out your pace for your last race, or how many calories
+            you burnt during your last workout, or simply to convert between miles and kilometers.
+        </div>
+        <div class="grid-cell-last grid-cell-5">&nbsp;</div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>

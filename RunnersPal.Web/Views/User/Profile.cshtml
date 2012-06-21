@@ -1,0 +1,91 @@
+﻿@model RunnersPal.Web.Models.ProfileModel
+@{
+    ViewBag.Title = "My:Profile";
+    ViewBag.SelectedTab = "MyStats";
+}
+<script type="text/javascript">
+    var CalcModel = function () {
+        var self = this;
+        self.weightUnits = ko.observable('@Model.Weight.Units');
+        self.weightKg = ko.observable('@Model.Weight.Kg');
+        self.weightLbs = ko.observable('@Model.Weight.Lbs');
+        self.weightSt = ko.observable('@Model.Weight.St');
+        self.weightStLbs = ko.observable('@Model.Weight.StLbs');
+        self.priorweightUnits = ko.observable('@Model.Weight.Units');
+        self.distUnits = ko.observable(@Model.DistUnits);
+    };
+
+    var model = new CalcModel();
+    model.weightUnits.subscribe(function() {
+        $.post('@Url.Action("calcweight", "calculators")',
+            { kg: model.weightKg(), lbs: model.weightLbs(), st: model.weightSt(), stLbs: model.weightStLbs(), units: model.priorweightUnits() },
+            function (result) {
+                if (result.Result) {
+                    if (result.Calc.Kg != null) model.weightKg(result.Calc.Kg.toFixed(4));
+                    if (result.Calc.Lbs != null) model.weightLbs(result.Calc.Lbs.toFixed(4));
+                    if (result.Calc.St != null) model.weightSt(result.Calc.St);
+                    if (result.Calc.StLbs != null) model.weightStLbs(result.Calc.StLbs.toFixed(4));
+                }
+                model.priorweightUnits(model.weightUnits());
+            });
+    });
+
+    $(function () {
+        ko.applyBindings(model);
+        unitsModel.change(function(u) {
+            model.distUnits(u);
+        });
+    });
+</script>
+
+<h1>My:Profile</h1>
+
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+<p class="important">@Model.Message</p>
+}
+
+<form method="post" action="@Url.Action("updateprofile")">
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Name:</div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" name="name" value="@Model.Name" /></div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Weight Units:</div>
+		<div class="grid-cell-last grid-cell-80">
+            <input type="radio" name="weightUnits" id="weightUnits1" data-bind="checked: weightUnits" value="kg" /><label for="weightUnits1"> kilograms</label><br />
+            <input type="radio" name="weightUnits" id="weightUnits2" data-bind="checked: weightUnits" value="lbs" /><label for="weightUnits2"> pounds</label><br />
+            <input type="radio" name="weightUnits" id="weightUnits3" data-bind="checked: weightUnits" value="st" /><label for="weightUnits3"> stones and pounds</label>
+         </div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Weight:</div>
+		<div class="grid-cell-last grid-cell-80">
+            <span data-bind="visible: weightUnits() == 'kg'"><input type="text" data-bind="value: weightKg, valueUpdate: 'afterkeydown'" name="weightKg" /> kg</span>
+            <span data-bind="visible: weightUnits() == 'lbs'"><input type="text" data-bind="value: weightLbs, valueUpdate: 'afterkeydown'" name="weightLbs" /> lbs</span>
+            <span data-bind="visible: weightUnits() == 'st'"><input type="text" data-bind="value: weightSt, valueUpdate: 'afterkeydown'" name="weightSt" class="short" /> st <input type="text" data-bind="value: weightStLbs, valueUpdate: 'afterkeydown'" name="weightStLbs" class="short" /> lbs</span>
+        </div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Preferred Distance Units:</div>
+		<div class="grid-cell-last grid-cell-80">
+            <input type="radio" name="distUnits" id="distUnits1" data-bind="checked: distUnits" value="0" /><label for="distUnits1"> miles</label><br />
+            <input type="radio" name="distUnits" id="distUnits2" data-bind="checked: distUnits" value="1" /><label for="distUnits2"> kilometers</label><br />
+         </div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"></div>
+		<div class="grid-cell-last grid-cell-80"><input type="submit" value="Save" class="submit" /></div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>
+</form>

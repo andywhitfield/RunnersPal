@@ -1,0 +1,100 @@
+﻿@model RunnersPal.Web.Models.MyStatsModel
+@{
+    ViewBag.Title = "My:Stats";
+    ViewBag.SelectedTab = "MyStats";
+    ViewBag.Scripts = new[] { "~/Scripts/highcharts.js", "~/Scripts/exporting.js" };
+}
+<script type="text/javascript">
+    $(function () {
+        new Highcharts.Chart({
+            chart: {
+                renderTo: 'statsChart',
+                zoomType: 'x'
+            },
+            title: {
+                text: 'Total Distance / Average Pace',
+                x: -20
+            },
+            xAxis: {
+                categories: [@Html.Raw(Model.DistanceStatCategories())]
+            },
+            yAxis: [{
+                title: {
+                    text: '@ViewContext.UserDistanceUnits("f")'
+                },
+                min: 0.0,
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }]
+            },{
+                title: {
+                    text: 'min/@ViewContext.UserDistanceUnits("a.s")'
+                },
+                min: 0.0,
+                plotLines: [{
+                    value: 0,
+                    width: 1,
+                    color: '#808080'
+                }],
+                opposite: true
+            }],
+            tooltip: {
+                formatter: function () {
+                    return this.series.name == 'Distance'
+                        ? ('<b>Total distance</b><br/>@Model.TooltipPeriod' + this.x + ': ' + this.y + '@ViewContext.UserDistanceUnits("a")')
+                        : ('<b>Average pace</b><br/>@Model.TooltipPeriod' + this.x + ': ' + this.y + 'min/@ViewContext.UserDistanceUnits("a.s")');
+                }
+            },
+            legend: {
+                layout: 'vertical',
+                align: 'left',
+                x: 120,
+                verticalAlign: 'top',
+                y: 10,
+                floating: true,
+                backgroundColor: '#FFFFFF'
+            },
+            series: [{
+                name: 'Distance',
+                data: [@Model.DistanceStatValues()],
+                type: '@if (Model.DistanceStats.Count() == 1) {<text>column</text>} else {<text>line</text>}'
+            }, {
+                name: 'Pace',
+                yAxis: 1,
+                data: [@Model.PaceStatValues()],
+                type: '@if (Model.DistanceStats.Count() == 1) {<text>column</text>} else {<text>line</text>}'
+            }]
+        });
+
+        unitsModel.change(function(u) {
+            window.location.reload();
+        });
+    });
+</script>
+
+<h1>Stats</h1>
+
+@if (Model.Period != RunnersPal.Web.Models.MyStatsModel.StatsPeriod.Week) {
+    <a href="@Url.Action("byweek")">Week</a>
+} else {
+    <strong>Week</strong>
+}
+|
+@if (Model.Period != RunnersPal.Web.Models.MyStatsModel.StatsPeriod.Month) {
+    <a href="@Url.Action("bymonth")">Month</a>
+} else {
+    <strong>Month</strong>
+}
+|
+@if (Model.Period != RunnersPal.Web.Models.MyStatsModel.StatsPeriod.Year) {
+    <a href="@Url.Action("byyear")">Year</a>
+} else {
+    <strong>Year</strong>
+}
+<span style="float:right;"><a href="@Url.Action("download")">Download all Run:Log events</a></span>
+
+<div id="statsChart" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
+<p></p>
+

@@ -1,0 +1,406 @@
+﻿@model RunnersPal.Web.Models.RoutePalViewModel
+@{
+    ViewBag.Title = "Route:Pal";
+    ViewBag.SelectedTab = "RoutePal";
+    ViewBag.Scripts = new[] { "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
+}
+<style>
+#routeManagement { height: 500px; }
+</style>
+<script type="text/javascript">
+    var kmUnitMultiplier = 1 / 1.609344;
+
+    function MyRouteModel(routeModel, id, name, distance, lastRunOn, notes, lastRunBy) {
+        var self = this;
+        self._routeModel = routeModel;
+        self.routeId = ko.observable(id);
+        self.routeName = ko.observable(name);
+        self.routeNotes = ko.observable(notes);
+        self.distance = ko.observable(distance);
+        self.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        self.lastRunOn = ko.observable(lastRunOn);
+        self.lastRunBy = ko.observable(lastRunBy);
+
+        self.showLastRun = ko.computed(function() { return self.lastRunOn() != null && self.lastRunOn() != ""; }, this);
+        self.lastRunText = ko.computed(function() {
+            if (!self.showLastRun()) return "";
+            var lastRunTxt = "Last run on " + self.lastRunOn();
+            if (self.lastRunBy() != null && self.lastRunBy() != "")
+                lastRunTxt += " by " + self.lastRunBy();
+            lastRunTxt += ".";
+            return lastRunTxt;
+        }, this);
+
+        self.loadRoute = function() {
+            self.reload(function(result) {
+                $("#routeManagementOptions").accordion({ active: 2 });
+                self._routeModel.reset(result);
+            });
+        };
+        self.reload = function(callback) {
+            $.post('@Url.Action("load", "routepal")', { id: self.routeId() },
+                function (result) {
+                    if (!result.Completed) {
+                        // TODO: proper error
+                        alert('Could not load route: ' + result.Reason);
+                        return;
+                    }
+                    callback(result.Route);
+                }
+            );
+        };
+    }
+
+    function RouteDisplayModel() {
+        this._route = null;
+        this.routeId = ko.observable(0);
+        this.routeName = ko.observable("");
+        this.originalRouteName = ko.observable("");
+        this.routeNotes = ko.observable("");
+        this.originalRouteNotes = ko.observable("");
+        this.routePublic = ko.observable(false);
+        this.originalRoutePublic = ko.observable(false);
+        this.routeModified = ko.observable(false);
+        this.routePointCount = ko.observable(0);
+        this.allowSave = ko.computed(function() {
+            if (this.routeName() == "") return false;
+            if (this.route != null && this.routePointCount() == 0) return false;
+            if (this.routeModified()) return true;
+            if (this.routeId() > 0) {
+                if (this.routeName() != this.originalRouteName()) return true;
+                if (this.routeNotes() != this.originalRouteNotes()) return true;
+                if (this.routePublic() != this.originalRoutePublic()) return true;
+            }
+            return false;
+        }, this);
+        this.distance = ko.observable(0.00);
+        this.distanceDisplay = ko.computed(function() { return this.distance() == 0 ? "0" : this.distance().toFixed(4); }, this);
+        this.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        this.allowUndo = ko.computed(function() { return this.distanceDisplay() != "0" || (this.routePointCount() > 0); }, this);
+
+        this.addRoutePoint = function(p) {
+            if (this._route == null) return;
+            this._route.addPoint(p);
+            this.routePointCount(this._route.pointCount());
+            this.routeModified(true);
+            this.distance(this._route.totalDistance() * kmUnitMultiplier);
+        };
+        this.undoLastPoint = function() {
+            if (this._route == null) return;
+            this._route.undo();
+            this.routePointCount(this._route.pointCount());
+            this.routeModified(true);
+            this.distance(this._route.totalDistance() * kmUnitMultiplier);
+        };
+        this.pointsToJson = function() {
+            if (this._route == null) return "[]";
+            return this._route.toJson();
+        }
+
+        this.reset = function(json) {
+            if (typeof(json) == "undefined" || json == null)
+                json = { Id: 0, Name: "", Notes: "", Public: false, Points: [] };
+            
+            this.routeId(json.Id);
+            this.routeName(json.Name);
+            this.originalRouteName(json.Name);
+            this.routeNotes(json.Notes);
+            this.originalRouteNotes(json.Notes);
+            this.routePublic(json.Public);
+            this.originalRoutePublic(json.Public);
+            this.distance(0.00);
+
+            if (this._route != null) {
+                this._route.clear();
+                this.routePointCount(this._route.pointCount());
+                if (typeof(json.Points) == "string") {
+                    var mapPoints = $.parseJSON(json.Points);
+                    for (var i = 0; i < mapPoints.length; i++)
+                        this.addRoutePoint(mapPoints[i]);
+                }
+            }
+            this.routeModified(false);
+        };
+
+        this.myRoutes = ko.observableArray([
+            @foreach (var route in Model.Routes) {<text>
+            new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes', ''),</text>}
+        ]);
+        this.currentRoute = function() {
+            if (this.routeId() < 1) return null;
+            for (var i = 0; i < this.myRoutes().length; i++) {
+                var route = this.myRoutes()[i];
+                if (route.routeId() == this.routeId()) return route;
+            }
+            return null;
+        };
+
+        this.foundRoutes = ko.observableArray([]);
+        this.foundRouteText = ko.observable("");
+    }
+
+    $(function () {
+        $("#routeManagementOptions").accordion({ fillSpace: true, active: 2 });
+        $("#routeManagement").resizable({
+            minHeight: 250,
+            handles: "s",
+            resize: function () {
+                $("#routeManagementOptions").accordion("resize");
+            },
+            alsoResize: "#mapDiv"
+        });
+
+        var loginPromptDialog = $("#loginPromptDialog").dialog({
+			height: 280,
+            width: 400,
+			modal: true,
+            buttons: { OK: function() { $(this).dialog("close"); } },
+            autoOpen: false
+		});
+
+        var routeModel = new RouteDisplayModel();
+        if (typeof (Microsoft) != "undefined") {
+            var map = new Microsoft.Maps.Map($('#mapDiv')[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
+            Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
+                e.handled = true;
+                routeModel.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
+            });
+            map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
+            var theRoute = new MapRoute(map);
+            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier);
+            routeModel._route = theRoute;
+        } else {
+            routeModel._route = new function() {
+                this._points = 0;
+                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 }]'; };
+                this.clear = function() { this._points = 0; };
+                this.addPoint = function(p) { this._points++; };
+                this.pointCount = function() { return this._points; }
+                this.totalDistance = function() { return this._points * 2; }
+            };
+            $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
+            $('#fakeMap').click(function() {
+                routeModel.routeModified(true);
+                routeModel.distance(7.4);
+            });
+        }
+
+        $('#routeNew')
+            .button({ icons: { primary: "ui-icon-newwin" }, text: false })
+            .click(function() {
+                if (routeModel.allowSave() || routeModel.routePointCount() > 0) {
+                    if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
+                }
+                routeModel.reset();
+            });
+
+        $('#routeReset')
+            .button({ icons: { primary: "ui-icon-refresh" }, text: false })
+            .click(function() {
+                if (routeModel.allowSave()) {
+                    if (!window.confirm('This will undo all the changes you\'ve made to the current route - are you sure you want to continue?')) return;
+                }
+                routeModel.currentRoute().reload(function(result) { routeModel.reset(result); });
+            });
+
+        $('#routeUndo')
+            .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
+            .click(function() {
+                routeModel.undoLastPoint();
+            });
+
+        $('#routeSave')
+            .button({ icons: { primary: "ui-icon-circle-check" }, text: false })
+            .click(function() {
+                if (!loginAccountModel.isLoggedIn) {
+                    loginPromptDialog.dialog('open');
+                    loginPromptDialog.bind('dialogclose', function() {
+                        //TODO: save route info to session, so on return, it is saved
+                        loginAccountModel.showLoginDialog();
+                        loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))#save=true';
+                        loginPromptDialog.unbind('dialogclose');
+                    });
+                } else {
+                    $.post('@Url.Action("save", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
+                        function (result) {
+                            if (!result.Completed) {
+                                // TODO: proper error
+                                alert('Could not save route: ' + result.Reason);
+                                return;
+                            }
+                            routeModel.reset(result.Route);
+                            // TODO: only push if a new route...otherwise update existing (or refresh the whole lot?)
+                            routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance, result.Route.LastRun, result.Route.Notes, ''));
+                        }
+                    );
+                }
+            });
+
+        $('#routeDelete')
+            .button({ icons: { primary: "ui-icon-closethick" }, text: false })
+            .click(function() {
+                if (!window.confirm('This will delete the route - are you sure you want to continue?')) return;
+
+                $.post('@Url.Action("delete", "routepal")', { id: routeModel.routeId() },
+                    function (result) {
+                        if (!result.Completed) {
+                            // TODO: proper error
+                            alert('Could not delete route: ' + result.Reason);
+                            return;
+                        }
+                        routeModel.reset();
+                        for (var i = 0; i < routeModel.myRoutes().length; i++)
+                            if (routeModel.myRoutes()[i].routeId() == routeModel.routeId())
+                                routeModel.myRoutes.remove(routeModel.myRoutes()[i]);
+                    }
+                );
+            });
+
+        $('#findARoute').submit(function() {
+            var query = $('#q').val();
+            $.post('@Url.Action("find", "routepal")', { q: query },
+                function (result) {
+                    if (!result.Completed) {
+                        routeModel.foundRouteText('Could not search for routes: ' + result.Reason);
+                        return;
+                    }
+                    routeModel.foundRoutes.removeAll();
+                    for (var i = 0; i < result.Routes.length; i++)
+                        routeModel.foundRoutes.push(new MyRouteModel(routeModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+                    if (routeModel.foundRoutes().length == 0)
+                        routeModel.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
+                }
+            );
+            return false;
+        });
+
+        ko.bindingHandlers.buttonEnabled = {
+            update: function(element, valueAccessor, allBindingsAccessor, viewModel) {
+                $(element).button(ko.utils.unwrapObservable(valueAccessor()) ? 'enable' : 'disable');
+            }
+        };
+        ko.applyBindings(routeModel);
+
+        /*
+        document.getElementById('clear').onclick = function () {
+        route.clear();
+        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
+        map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
+        };
+        document.getElementById('undo').onclick = function () {
+        route.undo();
+        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
+        };
+        document.getElementById('reload').onclick = function () {
+        var mapPoints = route.points();
+        route.clear();
+        for (var i = 0; i < mapPoints.length; i++)
+        route.addPoint(mapPoints[i].toMapsLocation());
+
+        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
+        };
+
+        if (initPoints.length > 0) {
+        for (var i = 0; i < initPoints.length; i++) {
+        route.addPoint(new Microsoft.Maps.Location(initPoints[i].latitude, initPoints[i].longitude));
+        }
+        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
+        }
+
+        function loadRoute(id) {
+            $.post('@Url.Action("load", "routepal")', { id: id },
+                function (result) {
+                    if (!result.Completed) {
+                        // TODO: proper error
+                        alert('Could not load route: ' + result.Reason);
+                        return;
+                    }
+                    $("#routeManagementOptions").accordion({ active: 2 });
+                    routeModel.reset(result.Route);
+                }
+            );
+        }
+        ~*/
+    });
+</script>
+
+<h1>Routes</h1>
+
+<div id="routeManagement">
+<div id="routeManagementOptions">
+	<h3><a>My Routes</a></h3>
+	<div>
+    <p data-bind="visible: myRoutes().length == 0">
+    You have no saved routes - click the route mapping tab to plot a route, enter a name,
+    then click save.
+    </p>
+    <ul data-bind="template: { foreach: myRoutes }">
+        <li>
+            <a href="#" data-bind="click: loadRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+            <span data-bind="visible: showLastRun, text: lastRunText"></span>
+        </li>
+    </ul>
+    </div>
+    <h3><a>Find a route</a></h3>
+    <div>
+        <form id="findARoute">
+        <div>
+            <label for="findRouteName"><strong>Find route:</strong></label>
+            <input type="text" id="q" />
+            <input id="findRouteGo" type="submit" value="Find..." />
+        </div>
+        
+        <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() == ''">Enter a search term to find a route.</div>
+        <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() != '', text: foundRouteText"></div>
+        <ul data-bind="template: { foreach: foundRoutes }">
+            <li>
+                <a href="#" data-bind="click: loadRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+                <span data-bind="visible: showLastRun, text: lastRunText"></span>
+            </li>
+        </ul>
+        </form>
+    </div>
+	<h3><a>Route Mapping</a></h3>
+	<div>
+        <div style="position: relative; float: right; z-index: 10; background-color: #efefef; width: 180px; padding: 5px;">
+            <button id="routeNew" title="Clear all the points and start a new route">New</button>
+            <button id="routeReset" data-bind="visible: routeId() > 0, buttonEnabled: allowSave()" title="Reset the points to the saved routed">Reset</button>
+            <button id="routeUndo" data-bind="buttonEnabled: allowUndo()" title="Undo the last point added to the route">Undo</button>
+            <button id="routeSave" data-bind="buttonEnabled: allowSave()" title="Save the route">Save</button>
+            <button id="routeDelete" data-bind="visible: routeId() > 0" title="Delete this route">Delete</button>
+
+            <div><label for="route-name"><strong>Name:</strong> (* required)</label></div>
+            <div><input type="text" id="route-name" data-bind="value: routeName, valueUpdate: 'afterkeydown'" /></div>
+
+            <div>
+                <strong>Distance:</strong>
+                <span data-bind="text: distanceDisplay">0</span> <span data-bind="text: distanceUnits">miles</span>
+            </div>
+
+            <div><label for="route-notes"><strong>Route Notes:</strong></label></div>
+            <div><textarea id="route-notes" rows="4" cols="20" style="width: 150px;" data-bind="value: routeNotes, valueUpdate: 'afterkeydown'"></textarea></div>
+
+            <div>
+                <label for="route-public" title="If checked, allows everyone to view this route"><strong>Public Route:</strong></label>
+                <input type="checkbox" id="route-public" data-bind="checked: routePublic" title="If checked, allows everyone to view this route" />
+            </div>
+        </div>
+        <div id="mapDiv" style="position:relative; width:auto; height:100%"></div>
+	</div>
+</div>
+</div>
+
+<p></p>
+
+<div id="loginPromptDialog" title="Please login">
+	<p>
+    Before you can save the route, you need to login or create an account
+    at the <span class="important">top of the page</span>.
+    </p>
+
+    <p>
+    <strong>First time users: </strong> Don't worry, it will only take a few moments
+    and we only ask for your name. Simply use your Google, Yahoo, AOL, or MyOpenID
+    account to login - and you're done! We won't have access to your password or email address.
+    </p>
+</div>

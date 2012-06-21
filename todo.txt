@@ -1,0 +1,13 @@
+next:
+
+route:pal - support finding routes
+run:log routes - support finding a new route
+route:pal - saving a route doesn't do anything yet
+run:log and route:pal...handle units change on my routes list
+run:log routes - integrate bingmaps...support saving a log event against a new route
+route:pal - support saving routes as part of login/reg process
+check timezone...i.e. when adding an event, make sure it works when the client is in a US timezone, server is GMT/BST/whatever.
+errors: ajax errors in general; errors logging in (e.g. no openid endpoint)!
+final tidy up: remove anything that isn't implemented; clean up javascript/css; upload to github;
+buy runnerspal.co.uk domain
+release!

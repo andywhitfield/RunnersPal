@@ -1,0 +1,76 @@
+﻿@{ ViewBag.Title = "Pace Calculator"; ViewBag.SelectedTab = "Calculators"; }
+<script type="text/javascript">
+    var AddRunModel = function () {
+        this.distance = ko.observable("");
+        this.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        this.distanceUnitsSingular = ko.observable("@ViewContext.UserDistanceUnits("a.s")");
+        this.time = ko.observable("");
+        this.pace = ko.observable("");
+    };
+
+    var model = new AddRunModel();
+
+    function calculateDistTimePace(field) {
+        $.post('@Url.Action("calcpace", "calculators")',
+               { distance: model.distance(), time: model.time(), pace: model.pace(), calc: field },
+               function (result) {
+                   model.distance(result.Distance == null ? "" : result.Distance.BaseDistance.toFixed(4));
+                   model.time(result.Time == null ? "" : result.Time);
+                   model.pace(result.Pace == null ? "" : result.Pace);
+               });
+    }
+
+    $(function () {
+        $('.recalculate').click(function () { calculateDistTimePace($(this).attr('data-field')); });
+        ko.applyBindings(model);
+        $('#distance').focus();
+        $('#toggleDistUnits').click(function() { unitsModel.toggle(); });
+        $('#distanceHalfMarathon').click(function() { model.distance(model.distanceUnits()=='miles'?13.109375:21.097494); });
+        $('#distanceMarathon').click(function() { model.distance(model.distanceUnits()=='miles'?26.21875:42.194988); });
+        unitsModel.change(function(u) {
+            model.distanceUnits(unitsModel.currentUnitsName);
+            model.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
+            if (model.distance() != "") {
+                $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: model.distance(), distanceM: model.distance(), calc: unitsModel.currentUnitsName },
+                    function (result) {
+                        var newDistance = u == @((int)RunnersPal.DistanceUnits.Miles) ? result.DistanceM : result.DistanceKm;
+                        if (newDistance == null) return;
+                        model.distance(newDistance.toFixed(4));
+                    }
+                  );
+            }
+            if (model.pace() != "") {
+                $.post('@Url.Action("calcpace", "calculators")', { pace: model.pace(), calc: 'pace'+unitsModel.currentUnitsName+'units' },
+                    function (result) {
+                        if (result.Pace != null) model.pace(result.Pace);
+                    }
+                  );
+            }
+        });
+    });
+</script>
+
+<h1>Pace Calculator</h1>
+
+<p>
+Enter any two values and click the button to calculate the other. For example, enter the distance you ran and the total time
+it took you to run and click the 'Pace' button to calculate your average pace for the run.
+</p>
+
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><input type="button" class="recalculate submit" data-field="distance" value="Distance:" title="Click to calculate distance from the time and pace"/></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: distance, valueUpdate: 'afterkeydown'" id="distance" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span> (<button id="toggleDistUnits">toggle</button>)<br /><button id="distanceHalfMarathon">half-marathon</button> <button id="distanceMarathon">marathon</button></div>
+		<div class="grid-cell-end"></div>
+	</div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><input type="button" class="recalculate submit" data-field="time" value="Time taken:" title="Click to calculate time from the distance and pace"/></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: time, valueUpdate: 'afterkeydown'" id="time" title="Enter mm or mm:ss or hh:mm:ss" /><br /><small>[hh:]mm[:ss]</small></div>
+		<div class="grid-cell-end"></div>
+	</div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><input type="button" class="recalculate submit" data-field="pace" value="Pace:" title="Click to calculate pace from the distance and time"/></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: pace, valueUpdate: 'afterkeydown'" title="Enter mm or mm:ss" id="pace" /> min/<span data-bind="text: distanceUnitsSingular" class="distanceUnitsSingular">mile</span><br /><small>mm[:ss]</small></div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>

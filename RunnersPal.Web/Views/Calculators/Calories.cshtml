@@ -1,0 +1,105 @@
+﻿@model RunnersPal.Web.Models.CaloriesCalculatorModel
+@{ ViewBag.Title = "Calories Calculator"; ViewBag.SelectedTab = "Calculators"; }
+<script type="text/javascript">
+    var CalcModel = function () {
+        var self = this;
+        self.distance = ko.observable("");
+        self.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        self.distanceUnitsSingular = ko.observable("@ViewContext.UserDistanceUnits("a.s")");
+        self.weightUnits = ko.observable("@(Model.Weight.Units)");
+        self.weightKg = ko.observable(@(Model.Weight.Kg));
+        self.weightLbs = ko.observable(@(Model.Weight.Lbs));
+        self.weightSt = ko.observable(@(Model.Weight.St));
+        self.weightStLbs = ko.observable(@(Model.Weight.StLbs));
+        self.calories = ko.observable("0");
+        self.priorWeightUnits = ko.observable("@(Model.Weight.Units)");
+        self.computedCalories = ko.computed(function() {
+            $.post('@Url.Action("calccalories", "calculators")',
+                { distance: self.distance(), kg: self.weightKg(), lbs: self.weightLbs(), st: self.weightSt(), stLbs: self.weightStLbs(), units: self.weightUnits() },
+                function (result) { if (result.Result) self.calories(result.Calories); });
+        }, self).extend({ throttle: 200 });
+    };
+
+    var model = new CalcModel();
+    model.weightUnits.subscribe(function() {
+        $.post('@Url.Action("calcweight", "calculators")',
+            { kg: model.weightKg(), lbs: model.weightLbs(), st: model.weightSt(), stLbs: model.weightStLbs(), units: model.priorWeightUnits() },
+            function (result) {
+                if (result.Result) {
+                    if (result.Calc.Kg != null) model.weightKg(result.Calc.Kg.toFixed(4));
+                    if (result.Calc.Lbs != null) model.weightLbs(result.Calc.Lbs.toFixed(4));
+                    if (result.Calc.St != null) model.weightSt(result.Calc.St);
+                    if (result.Calc.StLbs != null) model.weightStLbs(result.Calc.StLbs.toFixed(4));
+                }
+                model.priorWeightUnits(model.weightUnits());
+            });
+    });
+
+    $(function () {
+        ko.applyBindings(model);
+        $('#distance').focus();
+        $('#toggleDistUnits').click(function() { unitsModel.toggle(); });
+        $('#distanceHalfMarathon').click(function() { model.distance(model.distanceUnits()=='miles'?13.109375:21.097494); });
+        $('#distanceMarathon').click(function() { model.distance(model.distanceUnits()=='miles'?26.21875:42.194988); });
+        unitsModel.change(function(u) {
+            model.distanceUnits(unitsModel.currentUnitsName);
+            model.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
+            if (model.distance() != "") {
+                $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: model.distance(), distanceM: model.distance(), calc: unitsModel.currentUnitsName },
+                    function (result) {
+                        var newDistance = u == @((int)RunnersPal.DistanceUnits.Miles) ? result.DistanceM : result.DistanceKm;
+                        if (newDistance == null) return;
+                        model.distance(newDistance.toFixed(4));
+                    }
+                  );
+            }
+        });
+    });
+</script>
+
+<h1>Calories Burned Calculator</h1>
+
+<p>
+Get a rough idea how many calories you burnt during your last run. The actual number of
+calories burnt will vary depending on the intensity of your run, but this is a simple and
+interesting guide to see how many miles you need to run to lose those pounds!
+</p>
+
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Distance:</div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: distance, valueUpdate: 'afterkeydown'" id="distance" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span> (<button id="toggleDistUnits">toggle</button>)<br /><button id="distanceHalfMarathon">half-marathon</button> <button id="distanceMarathon">marathon</button></div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">Weight Units:</div>
+		<div class="grid-cell-last grid-cell-80">
+            <input type="radio" name="weightUnits" id="weightUnits1" data-bind="checked: weightUnits" value="kg" /><label for="weightUnits1"> kilograms</label><br />
+            <input type="radio" name="weightUnits" id="weightUnits2" data-bind="checked: weightUnits" value="lbs" /><label for="weightUnits2"> pounds</label><br />
+            <input type="radio" name="weightUnits" id="weightUnits3" data-bind="checked: weightUnits" value="st" /><label for="weightUnits3"> stones and pounds</label>
+         </div>
+		<div class="grid-cell-end"></div>
+	</div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20">
+            @if (ViewContext.HasUserAccountWeight()) {
+            <a href="@Url.Action("profile", "user")" title="Edit your profile and update your weight">Weight:</a>
+            } else {
+            <text>Weight:</text>
+            }
+        </div>
+		<div class="grid-cell-last grid-cell-80">
+            <span data-bind="visible: weightUnits() == 'kg'"><input type="text" data-bind="value: weightKg, valueUpdate: 'afterkeydown'" id="weightKg" /> kg</span>
+            <span data-bind="visible: weightUnits() == 'lbs'"><input type="text" data-bind="value: weightLbs, valueUpdate: 'afterkeydown'" id="weightLbs" /> lbs</span>
+            <span data-bind="visible: weightUnits() == 'st'"><input type="text" data-bind="value: weightSt, valueUpdate: 'afterkeydown'" id="weightSt" class="short" /> st <input type="text" data-bind="value: weightStLbs, valueUpdate: 'afterkeydown'" id="weightStLbs" class="short" /> lbs</span>
+        </div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row grid-row-separator"></div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><strong>Calories burned:</strong></div>
+		<div class="grid-cell-last grid-cell-80"><strong  data-bind="text: calories"></strong></div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>

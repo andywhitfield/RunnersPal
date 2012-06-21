@@ -1,0 +1,396 @@
+﻿@model RunnersPal.Web.Models.RunLogViewModel
+@{
+    ViewBag.Title = "Run:Log";
+    ViewBag.SelectedTab = "RunLog";
+    ViewBag.Stylesheets = new[] { "~/Content/fullcalendar.css" };
+    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js" };
+}
+<script type="text/javascript">
+    var newRunModel;
+    var beginEdit = false;
+
+    Date.prototype.yyyymmdd = function() { 
+        var yyyy = this.getFullYear().toString();
+        var mm = (this.getMonth()+1).toString();
+        var dd  = this.getDate().toString();
+        return yyyy + '-' + (mm[1]?mm:"0"+mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]);
+    };
+ 
+     function MyRouteModel(owner, id, name, distance, lastRunOn, notes) {
+        var self = this;
+        self._owner = owner;
+        self.routeId = ko.observable(id);
+        self.routeName = ko.observable(name);
+        self.routeNotes = ko.observable(notes);
+        self.distance = ko.observable(distance);
+        self.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        self.lastRunOn = ko.observable(lastRunOn);
+
+        self.showLastRun = ko.computed(function() { return self.lastRunOn() != null && self.lastRunOn() != ""; }, this);
+        self.lastRunText = ko.computed(function() {
+            if (!self.showLastRun()) return "";
+            return "Last run on " + self.lastRunOn() + ".";
+        }, this);
+
+        self.chooseRoute = function() {
+            // make this the selection
+            self._owner.route(self.routeId());
+            self._owner.distance(self.routeName() + ", " + self.distance() + " " + self.distanceUnits());
+            $('#add-run-time').focus().select();
+        };
+    }
+
+    $(function () {
+        var AddRunModel = function () {
+            var self = this;
+            this.runLogId = ko.observable(-1);
+            this.eventDate = ko.observable();
+            this.runDate = ko.computed(function () { return self.eventDate() ? self.eventDate().toLocaleDateString() : ""; });
+            this.route = ko.observable(0);
+            this.distance = ko.observable("0");
+            this.distanceDescription = ko.computed(function () {
+                if (this.route() == -1)
+                    return this.distance() + " " + (this.distance() != 1 ? this.distanceUnits() : this.distanceUnitsSingular());
+                if (this.route() > 0)
+                    return this.distance();
+                return "Nothing selected - please choose a distance from below";
+            }, this);
+            this.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+            this.distanceUnitsSingular = ko.observable("@ViewContext.UserDistanceUnits("a.s")");
+            this.time = ko.observable("");
+            this.pace = ko.observable("0");
+            this.paceCalc = ko.computed(function () {
+                $.post('@Url.Action("calcpace", "calculators")', { route: this.route(), distance: this.distance(), time: this.time(), calc: 'pace' },
+                function (result) {
+                    self.pace(result.Pace);
+                }
+              );
+            }, this).extend({ throttle: 200 });
+            this.calories = ko.observable("0");
+            this.caloriesCalc = ko.computed(function () {
+                if (!this.eventDate()) return;
+                $.post('@Url.Action("autocalccalories", "calculators")', { date: this.eventDate().toUTCString(), route: this.route(), distance: this.distance() },
+                function (result) {
+                    if (!result.Result) return;
+                    self.calories(result.Calories);
+                }
+              );
+            }, this).extend({ throttle: 200 });
+            this.comment = ko.observable("");
+            this.showAdd = ko.observable(true);
+            this.showEdit = ko.observable(false);
+            this.showDelete = ko.observable(false);
+            this.myRoutes = ko.observableArray([
+                @foreach (var route in Model.Routes) {<text>
+                new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes'),</text>}
+            ]);
+        };
+
+        var addRunDialog = $('#addRunDialog');
+        addRunDialog.hide();
+
+        var loginPromptDialog = $("#loginPromptDialog").dialog({
+			height: 280,
+            width: 400,
+			modal: true,
+            buttons: { OK: function() { $(this).dialog("close"); } },
+            autoOpen: false
+		});
+
+        var calendar = $('#calendar').fullCalendar({
+            header: {
+                left: 'today',
+                center: 'title',
+                right: 'prev,next'
+            },
+            firstDay: 1,
+            selectable: true,
+            selectHelper: false,
+            select: function (start, end, allDay) {
+                if (!loginAccountModel.isLoggedIn) {
+                    loginPromptDialog.dialog('open');
+                    loginPromptDialog.bind('dialogclose', function() {
+                        loginAccountModel.showLoginDialog();
+                        loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))#addEvent='+start.yyyymmdd();
+                        loginPromptDialog.unbind('dialogclose');
+                    });
+                } else {
+                    newRunModel.runLogId(-1);
+                    newRunModel.eventDate(start);
+                    newRunModel.distance("0");
+                    newRunModel.pace("0");
+                    newRunModel.time("");
+                    newRunModel.route(0);
+                    newRunModel.comment("");
+                    newRunModel.calories("0");
+                    newRunModel.showAdd(true);
+                    newRunModel.showEdit(false);
+                    newRunModel.showDelete(false);
+                    $(window).scrollTop(0);
+                    addRunDialog.slideDown(function() { $("#distanceSelection").accordion('option', 'active', 0); });
+                }
+                calendar.fullCalendar('unselect');
+            },
+            eventClick: function (evt) {
+                $.post('@Url.Action("view", "runlog")', { runlogid: evt.id },
+                    function (result) {
+                        if (!result.Completed) {
+                            // TODO: proper error handling
+                            alert('Could not view event: ' + result.Reason);
+                            return;
+                        }
+
+                        addRunDialog.slideDown(function() {
+                            var currentAccordionTab = $("#distanceSelection").accordion('option', 'active');
+                            var newAccordionTab = result.routeType == 'common' ? 0 : (result.route == -1 ? 4 : 1);
+                            if (currentAccordionTab != newAccordionTab) {
+                                beginEdit = true;
+                                $("#distanceSelection").accordion('option', 'active', newAccordionTab);
+                            }
+                            $(window).scrollTop(0);
+                        });
+                        newRunModel.runLogId(result.id);
+                        newRunModel.eventDate(new Date(result.date));
+                        newRunModel.distance(result.distance);
+                        newRunModel.pace(result.pace);
+                        newRunModel.time(result.time);
+                        newRunModel.route(result.route);
+                        newRunModel.comment(result.comment);
+                        newRunModel.showAdd(false);
+                        newRunModel.showEdit(true);
+                        newRunModel.showDelete(true);
+                    });
+            },
+            editable: false,
+            events: '@Url.Action("allevents", "runlog")'
+        });
+
+        $('#add-run-submit-button').click(function () {
+            addRunDialog.slideUp('fast');
+            var eventDate = newRunModel.eventDate();
+            $.post('@Url.Action("add", "runlog")', { date: eventDate.toUTCString(), distance: newRunModel.distance(), route: newRunModel.route(), time: newRunModel.time(), comment: newRunModel.comment() },
+                function (result) {
+                    if (!result.Completed) {
+                        // TODO: proper error
+                        alert('Could not add event: ' + result.Reason);
+                        return;
+                    }
+
+                    calendar.fullCalendar('refetchEvents');
+                });
+        });
+        $('#update-run-submit-button').click(function () {
+            addRunDialog.slideUp('fast');
+            var eventDate = newRunModel.eventDate();
+            $.post('@Url.Action("edit", "runlog")', { runLogId: newRunModel.runLogId(), date: eventDate.toUTCString(), distance: newRunModel.distance(), route: newRunModel.route(), time: newRunModel.time(), comment: newRunModel.comment() },
+                function (result) {
+                    if (!result.Completed) {
+                        // TODO: proper error
+                        alert('Could not add event: ' + result.Reason);
+                        return;
+                    }
+
+                    calendar.fullCalendar('refetchEvents');
+                })
+        });
+        $('#delete-run-submit-button').click(function () {
+            addRunDialog.slideUp('fast');
+            var eventDate = newRunModel.eventDate();
+            $.post('@Url.Action("delete", "runlog")', { runLogId: newRunModel.runLogId() },
+                function (result) {
+                    if (!result.Completed) {
+                        // TODO: proper error
+                        alert('Could not delete event: ' + result.Reason);
+                        return;
+                    }
+
+                    calendar.fullCalendar('refetchEvents');
+                })
+        });
+        $('#add-run-cancel-button').click(function () {
+            addRunDialog.slideUp('fast');
+        });
+
+        newRunModel = new AddRunModel();
+        ko.applyBindings(newRunModel);
+
+        unitsModel.change(function (u) {
+            calendar.fullCalendar('refetchEvents');
+            newRunModel.distanceUnits(unitsModel.currentUnitsName);
+            newRunModel.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
+
+            if (newRunModel.route() == -1)
+                $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: newRunModel.distance(), distanceM: newRunModel.distance(), calc: unitsModel.currentUnitsName },
+                    function (result) {
+                        var newDistance = u == @((int)RunnersPal.DistanceUnits.Miles) ? result.DistanceM : result.DistanceKm;
+                        if (newDistance == null) return;
+                        newRunModel.distance(newDistance.toFixed(4));
+                    }
+                );
+
+            if (newRunModel.route() > 0)
+                newRunModel.distance(newRunModel.distance() + " ");
+        });
+
+        $("#distanceSelection").accordion({
+            autoHeight: false,
+            navigation: true
+        }).bind('accordionchange', function (event, ui) {
+            if (beginEdit) {
+                beginEdit = false;
+                return;
+            }
+
+            // if enter manual distance, auto focus text box
+            if (ui.newHeader.attr('id') == "enterManualDistance") {
+                newRunModel.distance("0");
+                newRunModel.route(-1);
+                ui.newContent.find('input').focus().select();
+            } else {
+                newRunModel.route(0);
+            }
+        });
+        $('#distanceSelectionCommonRoutes > button')
+            .text(function () { return $(this).attr('data-distancedesc'); })
+            .click(function () {
+                newRunModel.route($(this).attr('data-route'));
+                newRunModel.distance($(this).attr('data-distancedesc'));
+                $('#add-run-time').focus().select();
+            });
+
+        var hashItem = window.location.hash;
+        if (hashItem.indexOf("#addEvent=") == 0) {
+            var eventDate = new Date(hashItem.substring(10));
+            calendar.fullCalendar('select', eventDate, eventDate, 1);
+        }
+    });
+</script>
+
+<h1>Run Log</h1>
+
+<div id="addRunDialog">
+    <fieldset>
+    <legend><h3>Add a Run</h3></legend>
+
+    <div class="grid">
+		<div class="grid-row">
+			<div class="grid-cell grid-cell-20"><strong>Date:</strong></div>
+			<div class="grid-cell-last grid-cell-80"><span id="add-run-date" data-bind="text: runDate"></span></div>
+			<div class="grid-cell-end"></div>
+		</div>
+        <div class="grid-row grid-row-separator"></div>
+		<div class="grid-row">
+			<div class="grid-cell grid-cell-20"><strong>Distance:</strong></div>
+			<div class="grid-cell-last grid-cell-80">
+                <div id="add-run-distance-selection"><span data-bind="text: distanceDescription"></span></div>
+                <div id="distanceSelection">
+	                <h3><a>Common routes</a></h3>
+	                <div id="distanceSelectionCommonRoutes">
+                        @foreach (var route in RunnersPal.MassiveDB.Current.GetCommonRoutes()) {
+                        <button data-route="@route.Id" data-distancedesc="@route.Name"></button><text>&nbsp;</text>
+                        }
+	                </div>
+                    @if (Model.Routes.Any()) {
+	                <h3><a>My routes</a></h3>
+	                <div>
+                        <ul data-bind="template: { foreach: myRoutes }" style="max-height: 200px;">
+                            <li>
+                                <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+                                <span data-bind="visible: showLastRun, text: lastRunText"></span>
+                            </li>
+                        </ul>
+	                </div>
+                    }
+	                <h3><a>Find a route</a></h3>
+	                <div>
+                        <div>
+                            <label for="findRouteName"><strong>Find route:</strong></label>
+                            <input type="text" id="findRouteName" />
+                            <input id="findRouteGo" type="button" value="Find..." />
+                        </div>
+        
+                        <ul>
+                        <li><a href="#">Green Park</a>, 6 miles, Last run on Wed 5th May 2012, Andy Whitfield.</li>
+                        <li><a href="#">Green Park + Lambeth</a>, 7 miles, Last run on Mon 3rd May 2012, Andy Whitfield.</li>
+                        </ul>
+	                </div>
+	                <h3><a>Map a new route</a></h3>
+	                <div>
+                        Big map section!
+	                </div>
+	                <h3 id="enterManualDistance"><a>Enter a manual distance</a></h3>
+	                <div>
+                        <input type="text" data-bind="value: distance, valueUpdate: 'afterkeydown'" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span>
+	                </div>
+                </div>
+            </div>
+			<div class="grid-cell-end"></div>
+		</div>
+        <div class="grid-row grid-row-separator"></div>
+		<div class="grid-row">
+			<div class="grid-cell grid-cell-20"><strong>Time taken:</strong></div>
+			<div class="grid-cell-last grid-cell-80">
+                <div class="grid">
+		            <div class="grid-row">
+			            <div class="grid-cell grid-cell-40"><input type="text" data-bind="value: time, valueUpdate: 'afterkeydown'" id="add-run-time" title="Enter mm or mm:ss or hh:mm:ss" /></div>
+			            <div class="grid-cell grid-cell-20"><strong>Pace:</strong></div>
+			            <div class="grid-cell-last grid-cell-40"><span id="add-run-pace" data-bind="text: pace">0</span> min/<span data-bind="text: distanceUnitsSingular" class="distanceUnitsSingular">mile</span></div>
+			            <div class="grid-cell-end"></div>
+		            </div>
+		            <div class="grid-row">
+			            <div class="grid-cell grid-cell-40"><small>[hh:]mm[:ss]</small></div>
+			            <div class="grid-cell grid-cell-20">
+                            @if (ViewContext.HasUserAccountWeight()) {
+                            <strong>Calories:</strong>
+                            }
+                        </div>
+			            <div class="grid-cell-last grid-cell-40">
+                            @if (ViewContext.HasUserAccountWeight()) {
+                            <span data-bind="text: calories">0</span>
+                            }
+                        </div>
+			            <div class="grid-cell-end"></div>
+		            </div>
+                </div>
+            </div>
+			<div class="grid-cell-end"></div>
+		</div>
+        <div class="grid-row grid-row-separator"></div>
+		<div class="grid-row">
+			<div class="grid-cell grid-cell-20"><strong>Comment:</strong> (optional)</div>
+			<div class="grid-cell-last grid-cell-80"><textarea id="add-run-comment" data-bind="value: comment, valueUpdate: 'afterkeydown'" rows="2" cols="30" maxlength="1000"></textarea></div>
+			<div class="grid-cell-end"></div>
+		</div>
+        <div class="grid-row grid-row-separator"></div>
+		<div class="grid-row">
+			<div class="grid-cell grid-cell-20"></div>
+			<div class="grid-cell-last grid-cell-80"><input type="button" class="submit" id="add-run-submit-button" value="Add" data-bind="visible: showAdd"/>
+             <input type="button" class="submit" id="update-run-submit-button" value="Update" data-bind="visible: showEdit"/>
+             <input type="button" class="submit" id="delete-run-submit-button" value="Delete" data-bind="visible: showDelete"/>
+             <input type="button" class="submit" id="add-run-cancel-button" value="Cancel"/></div>
+			<div class="grid-cell-end"></div>
+		</div>
+    </div>
+    </fieldset>
+    <br /><br />
+    <input type="hidden" id="add-run-date-utc" />
+</div>
+
+<div id="loginPromptDialog" title="Please login">
+	<p>
+    Before you can create your first Run Log, you need to login or create an account
+    at the <span class="important">top of the page</span>.
+    </p>
+
+    <p>
+    <strong>First time users: </strong> Don't worry, it will only take a few moments
+    and we only ask for your name. Simply use your Google, Yahoo, AOL, or MyOpenID
+    account to login - and you're done! We won't have access to your password or email address.
+    </p>
+</div>
+
+<div id="calendar"></div>
+
+<div>
+<a href="@Url.Action("download", "user")">Download all Run:Log events</a>
+</div>

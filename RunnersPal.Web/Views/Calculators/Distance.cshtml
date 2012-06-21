@@ -1,0 +1,47 @@
+﻿@{ ViewBag.Title = "Distance Calculator"; ViewBag.SelectedTab = "Calculators"; }
+<script type="text/javascript">
+    var CalcModel = function () {
+        this.distanceM = ko.observable("");
+        this.distanceKm = ko.observable("");
+    };
+
+    $(function () {
+        var model = new CalcModel();
+        ko.applyBindings(model);
+
+        $('#distanceM').keyup(function () {
+            $.post('@Url.Action("calcdistance", "calculators")', { distanceM: model.distanceM(), calc: 'kilometers' },
+                function (result) {
+                    model.distanceKm(result.DistanceKm == null ? "" : result.DistanceKm.toFixed(4));
+                }
+              );
+        }).focus();
+        $('#distanceKm').keyup(function () {
+            $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: model.distanceKm(), calc: 'miles' },
+                function (result) {
+                    model.distanceM(result.DistanceM == null ? "" : result.DistanceM.toFixed(4));
+                }
+              );
+        });
+    });
+</script>
+
+<h1>Distance Converter</h1>
+
+<p>
+Enter a distance into either the miles or kilometers box and the distance will convert automatically.
+</p>
+
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><strong>Distance in miles:</strong></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: distanceM, valueUpdate: 'afterkeydown'" id="distanceM" /> miles</div>
+		<div class="grid-cell-end"></div>
+	</div>
+	<div class="grid-row">&nbsp;</div>
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-20"><strong>Distance in kilometers:</strong></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: distanceKm, valueUpdate: 'afterkeydown'" id="distanceKm" /> kilometers</div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>

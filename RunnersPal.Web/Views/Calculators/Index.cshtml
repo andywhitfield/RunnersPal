@@ -1,0 +1,34 @@
+﻿@{ ViewBag.Title = "Calculators"; ViewBag.SelectedTab = "Calculators"; }
+<h1>Calculators</h1>
+
+<div class="grid">
+	<div class="grid-row">
+		<div class="grid-cell grid-cell-30"><h4 title="Pace calculator">Pace</h4><a href="@Url.Action("pace", "calculators")" title="Pace calculator"><img src="@Url.Content("~/Content/stopwatch.png")" alt="Pace" /></a></div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-30"><h4>Distance Converter</h4><a href="@Url.Action("distance", "calculators")" title="Distance converter"><img src="@Url.Content("~/Content/tapemeasure.png")" alt="Distance converter" /></a></div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell-last grid-cell-30"><h4 title="Calories burned">Calories</h4><a href="@Url.Action("calories", "calculators")" title="Calories burned"><img src="@Url.Content("~/Content/scales.png")" alt="Calories burned" /></a></div>
+		<div class="grid-cell-end"></div>
+	</div>
+    <div class="grid-row">
+		<div class="grid-cell grid-cell-30">Was your last 10K run at 7:50 min/mile pace?
+            If I run at 8:00 min/mile, how long would it take to finish a half marathon?
+            Use the @Html.ActionLink("Pace Calculator", "pace", "calculators") to work it all out!</div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell grid-cell-30">Need to quickly convert miles to kilometers?
+            Use the @Html.ActionLink("Distance Converter", "distance", "calculators") to quickly find switch between distance units.</div>
+        <div class="grid-cell grid-cell-5">&nbsp;</div>
+		<div class="grid-cell-last grid-cell-30">Do I deserve a treat?
+            Get a rough idea how many @Html.ActionLink("Calories were burnt", "calories", "calculators") during your last run.</div>
+		<div class="grid-cell-end"></div>
+	</div>
+</div>
+
+@*
+TODO
+Possible others
+
+Training times/Race time predictor (VDOT)
+Race splits (also linked from Pace calc)
+BMI index (this could be tracked over time as well for logged in users)
+*@
