@@ -84,6 +84,8 @@
                 @foreach (var route in Model.Routes) {<text>
                 new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes'),</text>}
             ]);
+            this.foundRoutes = ko.observableArray([]);
+            this.foundRouteText = ko.observable("");
         };
 
         var addRunDialog = $('#addRunDialog');
@@ -248,6 +250,8 @@
                 ui.newContent.find('input').focus().select();
             } else {
                 newRunModel.route(0);
+                if (ui.newHeader.attr('id') == "tabFindARoute")
+                    $('#q').focus().select();
             }
         });
         $('#distanceSelectionCommonRoutes > button')
@@ -263,6 +267,24 @@
             var eventDate = new Date(hashItem.substring(10));
             calendar.fullCalendar('select', eventDate, eventDate, 1);
         }
+
+        $('#findARoute').submit(function() {
+            var query = $('#q').val();
+            $.post('@Url.Action("find", "routepal")', { q: query },
+                function (result) {
+                    if (!result.Completed) {
+                        newRunModel.foundRouteText('Could not search for routes: ' + result.Reason);
+                        return;
+                    }
+                    newRunModel.foundRoutes.removeAll();
+                    for (var i = 0; i < result.Routes.length; i++)
+                        newRunModel.foundRoutes.push(new MyRouteModel(newRunModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+                    if (newRunModel.foundRoutes().length == 0)
+                        newRunModel.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
+                }
+            );
+            return false;
+        });
     });
 </script>
 
@@ -301,18 +323,24 @@
                         </ul>
 	                </div>
                     }
-	                <h3><a>Find a route</a></h3>
+	                <h3 id="tabFindARoute"><a>Find a route</a></h3>
 	                <div>
-                        <div>
-                            <label for="findRouteName"><strong>Find route:</strong></label>
-                            <input type="text" id="findRouteName" />
-                            <input id="findRouteGo" type="button" value="Find..." />
-                        </div>
+                    <form id="findARoute">
+                    <div>
+                        <label for="findRouteName"><strong>Find route:</strong></label>
+                        <input type="text" id="q" />
+                        <input id="findRouteGo" type="submit" value="Find..." />
+                    </div>
         
-                        <ul>
-                        <li><a href="#">Green Park</a>, 6 miles, Last run on Wed 5th May 2012, Andy Whitfield.</li>
-                        <li><a href="#">Green Park + Lambeth</a>, 7 miles, Last run on Mon 3rd May 2012, Andy Whitfield.</li>
-                        </ul>
+                    <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() == ''">Enter a search term to find a route.</div>
+                    <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() != '', text: foundRouteText"></div>
+                    <ul data-bind="template: { foreach: foundRoutes }">
+                        <li>
+                            <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+                            <span data-bind="visible: showLastRun, text: lastRunText"></span>
+                        </li>
+                    </ul>
+                    </form>
 	                </div>
 	                <h3><a>Map a new route</a></h3>
 	                <div>
