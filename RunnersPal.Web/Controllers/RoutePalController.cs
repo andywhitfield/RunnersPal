@@ -33,6 +33,30 @@ namespace RunnersPal.Web.Controllers
 
         public ActionResult Index()
         {
+            if (Request.Params["save"] == "true")
+            {
+                try
+                {
+                    var routeData = Session["rp_RouteInfoPreLogin"] as RouteData;
+                    if (routeData != null)
+                    {
+                        var saveInfo = Save(routeData) as JsonResult;
+                        if (saveInfo != null)
+                        {
+                            dynamic json = saveInfo.Data;
+                            if (json.Completed)
+                            {
+                                return Redirect(Url.Action("index", "routepal", new { route = json.Route.Id }));
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                    Session.Remove("rp_RouteInfoPreLogin");
+                }
+            }
+
             return View(new RoutePalViewModel { Routes = RoutesForCurrentUser(ControllerContext) });
         }
 
@@ -66,7 +90,7 @@ namespace RunnersPal.Web.Controllers
             var userUnits = ControllerContext.UserDistanceUnits();
             Distance distance = new Distance(routeData.Distance, userUnits);
 
-            Trace.TraceInformation("Saving route {0} name {1}, notes {2}, is public? {3}", routeData.Id, routeData.Name, routeData.Notes, routeData.Public);
+            Trace.TraceInformation("Saving route {0} name {1}, notes {2}, is public? {3}, points: {4}", routeData.Id, routeData.Name, routeData.Notes, routeData.Public, routeData.Points);
 
             string lastRun;
             string lastRunBy;
@@ -79,7 +103,18 @@ namespace RunnersPal.Web.Controllers
             }
             else
             {
-                // TODO: update
+                var currentRoute = MassiveDB.Current.FindRoute(routeData.Id);
+                if (currentRoute.Creator != ControllerContext.UserAccount().Id)
+                    return new JsonResult { Data = new { Completed = false, Reason = "Cannot save the route - you can only save routes you have created." } };
+
+                currentRoute.Name = routeData.Name;
+                currentRoute.Notes = routeData.Notes ?? "";
+                currentRoute.RouteType = (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute;
+                currentRoute.MapPoints = routeData.Points;
+                currentRoute.Distance = distance.BaseDistance;
+                currentRoute.DistanceUnits = (int)distance.BaseUnits;
+
+                MassiveDB.Current.UpdateRoute(currentRoute);
 
                 // get last run info
                 var runInfo = MassiveDB.Current.FindLatestRunLogForRoutes(new[] { routeData.Id }).FirstOrDefault();
@@ -146,6 +181,18 @@ namespace RunnersPal.Web.Controllers
             {
                 Data = new { Completed = true, Routes = routeModels.OrderByDescending(r => r.LastRunDate ?? r.CreatedDate) }
             };
+        }
+
+        [HttpPost]
+        public ActionResult BeforeLogin(RouteData routeData)
+        {
+            if (!ModelState.IsValid)
+                return new JsonResult { Data = new { Completed = false, Reason = "Please provide a route name." } };
+
+            Trace.TraceInformation("Saving route before login process - id {0}, name {1}, notes {2}, is public? {3}, points: {4}", routeData.Id, routeData.Name, routeData.Notes, routeData.Public, routeData.Points);
+            Session["rp_RouteInfoPreLogin"] = routeData;
+
+            return new JsonResult { Data = new { Completed = true } };
         }
     }
 }

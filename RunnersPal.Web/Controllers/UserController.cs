@@ -191,7 +191,10 @@ namespace RunnersPal.Web.Controllers
         public ActionResult AddName(string name)
         {
             if (string.IsNullOrWhiteSpace(name))
+            {
+                ViewData["ErrorMessage"] = "Your name is required - please type your name and try again.";
                 return View("FirstTime");
+            }
 
             var userAccount = ControllerContext.UserAccount();
             if (userAccount != null)

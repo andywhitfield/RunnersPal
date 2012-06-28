@@ -1,9 +1,16 @@
 ﻿@{ ViewBag.Title = "User: Create Your Account"; }
 <form method="post" action="@Url.Action("AddName")">
+    <p>
+    To finish creating your account, please enter your name.
+    </p>
+    @if (ViewData["ErrorMessage"] != null)
+    {
+        <div class="important">@ViewData["ErrorMessage"]</div>
+    }
     <div>
     Enter your name: <input type="text" name="name" value="" />
     </div>
     <div>
-    <input type="submit" value="Continue" />
+    <input type="submit" class="submit" value="Continue" />
     </div>
 </form>

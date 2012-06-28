@@ -379,11 +379,13 @@ input.loginLogoutSelection
   padding: 0 4px 0 4px;
   background: #00C6F0; 
   color: #FFF;
+  cursor: pointer;
 }
 input[type='text'].loginLogoutSelection 
 {
   background: #FFF;
-  color: #000; 
+  color: #000;
+  cursor: auto;
 }
 input.cancel 
 {
@@ -400,6 +402,8 @@ input.loginHelp
     background-position: -48px -144px;
 }
 input.loginGoogle { background-image: url(google.ico.png); background-repeat: no-repeat; background-position: left; }
+input.loginTwitter { background-image: url(twitter.ico.png); background-repeat: no-repeat; background-position: left; }
+input.loginFacebook { background-image: url(facebook.ico.png); background-repeat: no-repeat; background-position: left; }
 input.loginYahoo { background-image: url(yahoo.ico.png); background-repeat: no-repeat; background-position: left; }
 input.loginAOL { background-image: url(aol.ico.png); background-repeat: no-repeat; background-position: left; }
 input.loginMyOpenId { background-image: url(myopenid.ico.png); background-repeat: no-repeat; background-position: left; }

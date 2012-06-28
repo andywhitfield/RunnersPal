@@ -137,7 +137,7 @@ where l.UserAccountId = ua.Id", string.Join(", ", routeIds.Select(id => id.ToStr
             routeMatches = routeMatches.Concat(
                 new Route().All(
                 where: "(lower(Name) like @0 or lower(Notes) like @0) and (" + (userAccount != null ? "Creator <> @1 and " : "") + "MapPoints is not null and RouteType = '" + Route.PublicRoute + "')",
-                    args: new object[] { query, userAccount.Id })
+                args: new object[] { query, userAccount != null ? userAccount.Id : 0 })
             );
 
             return routeMatches;

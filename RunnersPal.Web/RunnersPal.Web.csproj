@@ -137,6 +137,7 @@
     <Content Include="Content\back.png" />
     <Content Include="Content\bullet.png" />
     <Content Include="Content\calc.png" />
+    <Content Include="Content\facebook.ico.png" />
     <Content Include="Content\footer.png" />
     <Content Include="Content\fullcalendar.css" />
     <Content Include="Content\google.ico.png" />
@@ -228,6 +229,7 @@
     <Content Include="Content\themes\pepper-grinder\images\ui-icons_fbdb93_256x240.png" />
     <Content Include="Content\themes\pepper-grinder\images\ui-icons_ffffff_256x240.png" />
     <Content Include="Content\themes\pepper-grinder\jquery-ui-1.8.17.custom.css" />
+    <Content Include="Content\twitter.ico.png" />
     <Content Include="Content\yahoo.ico.png" />
     <Content Include="Global.asax" />
     <Content Include="README.jQuery.vsdoc.txt" />

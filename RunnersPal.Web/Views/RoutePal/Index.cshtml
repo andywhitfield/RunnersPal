@@ -124,12 +124,26 @@
 
         this.myRoutes = ko.observableArray([
             @foreach (var route in Model.Routes) {<text>
-            new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes', ''),</text>}
+            new MyRouteModel(this, @route.Id, "@route.Name", @route.Distance, '@route.LastRun', "@route.Notes", ''),</text>}
         ]);
+        this.refreshMyRoute = function(json) {
+            var myRoute = this.currentRoute();
+            if (myRoute == null) return;
+            myRoute.routeId(json.Id);
+            myRoute.routeName(json.Name);
+            myRoute.routeNotes(json.Notes);
+            myRoute.lastRunOn(json.LastRun);
+            myRoute.lastRunBy("");
+            myRoute.distance(json.Distance.toFixed(2));
+        };
         this.currentRoute = function() {
             if (this.routeId() < 1) return null;
             for (var i = 0; i < this.myRoutes().length; i++) {
                 var route = this.myRoutes()[i];
+                if (route.routeId() == this.routeId()) return route;
+            }
+            for (var i = 0; i < this.foundRoutes().length; i++) {
+                var route = this.foundRoutes()[i];
                 if (route.routeId() == this.routeId()) return route;
             }
             return null;
@@ -215,10 +229,17 @@
                 if (!loginAccountModel.isLoggedIn) {
                     loginPromptDialog.dialog('open');
                     loginPromptDialog.bind('dialogclose', function() {
-                        //TODO: save route info to session, so on return, it is saved
-                        loginAccountModel.showLoginDialog();
-                        loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))#save=true';
-                        loginPromptDialog.unbind('dialogclose');
+                        $.post('@Url.Action("beforelogin", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
+                            function (result) {
+                                if (!result.Completed) {
+                                    // TODO: proper error
+                                    alert('Could not save route: ' + result.Reason);
+                                    return;
+                                }
+                                loginAccountModel.showLoginDialog();
+                                loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?save=true';
+                                loginPromptDialog.unbind('dialogclose');
+                            });
                     });
                 } else {
                     $.post('@Url.Action("save", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
@@ -228,9 +249,13 @@
                                 alert('Could not save route: ' + result.Reason);
                                 return;
                             }
+                            var isSavedRoute = routeModel.routeId() > 0;
                             routeModel.reset(result.Route);
-                            // TODO: only push if a new route...otherwise update existing (or refresh the whole lot?)
-                            routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance, result.Route.LastRun, result.Route.Notes, ''));
+                            if (isSavedRoute) {
+                                routeModel.refreshMyRoute(result.Route);
+                            } else {
+                                routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance, result.Route.LastRun, result.Route.Notes, ''));
+                            }
                         }
                     );
                 }
@@ -248,10 +273,10 @@
                             alert('Could not delete route: ' + result.Reason);
                             return;
                         }
-                        routeModel.reset();
                         for (var i = 0; i < routeModel.myRoutes().length; i++)
                             if (routeModel.myRoutes()[i].routeId() == routeModel.routeId())
                                 routeModel.myRoutes.remove(routeModel.myRoutes()[i]);
+                        routeModel.reset();
                     }
                 );
             });
@@ -281,47 +306,24 @@
         };
         ko.applyBindings(routeModel);
 
-        /*
-        document.getElementById('clear').onclick = function () {
-        route.clear();
-        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
-        map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
-        };
-        document.getElementById('undo').onclick = function () {
-        route.undo();
-        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
-        };
-        document.getElementById('reload').onclick = function () {
-        var mapPoints = route.points();
-        route.clear();
-        for (var i = 0; i < mapPoints.length; i++)
-        route.addPoint(mapPoints[i].toMapsLocation());
-
-        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
-        };
-
-        if (initPoints.length > 0) {
-        for (var i = 0; i < initPoints.length; i++) {
-        route.addPoint(new Microsoft.Maps.Location(initPoints[i].latitude, initPoints[i].longitude));
+        var routeId = parseInt(getParameterByName('route'));
+        if (!isNaN(routeId)) {
+            for (var i = 0; i < routeModel.myRoutes().length; i++)
+                if (routeModel.myRoutes()[i].routeId() == routeId)
+                    routeModel.myRoutes()[i].loadRoute();
         }
-        curDist.value = (route.totalDistance() * kmUnitMultiplier).toFixed(3) + distUnits;
-        }
-
-        function loadRoute(id) {
-            $.post('@Url.Action("load", "routepal")', { id: id },
-                function (result) {
-                    if (!result.Completed) {
-                        // TODO: proper error
-                        alert('Could not load route: ' + result.Reason);
-                        return;
-                    }
-                    $("#routeManagementOptions").accordion({ active: 2 });
-                    routeModel.reset(result.Route);
-                }
-            );
-        }
-        ~*/
     });
+
+    function getParameterByName(name) { 
+      name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]"); 
+      var regexS = "[\\?&]" + name + "=([^&#]*)"; 
+      var regex = new RegExp(regexS); 
+      var results = regex.exec(window.location.search); 
+      if (results == null) 
+        return ""; 
+      else 
+        return decodeURIComponent(results[1].replace(/\+/g, " ")); 
+    } 
 </script>
 
 <h1>Routes</h1>
@@ -400,7 +402,7 @@
 
     <p>
     <strong>First time users: </strong> Don't worry, it will only take a few moments
-    and we only ask for your name. Simply use your Google, Yahoo, AOL, or MyOpenID
+    and we only ask for your name. Simply use your Google, Twitter, Facebook, Yahoo, or MyOpenID
     account to login - and you're done! We won't have access to your password or email address.
     </p>
 </div>
