@@ -107,26 +107,39 @@ namespace RunnersPal.Web.Controllers
                 if (currentRoute.Creator != ControllerContext.UserAccount().Id)
                     return new JsonResult { Data = new { Completed = false, Reason = "Cannot save the route - you can only save routes you have created." } };
 
-                currentRoute.Name = routeData.Name;
-                currentRoute.Notes = routeData.Notes ?? "";
-                currentRoute.RouteType = (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute;
-                currentRoute.MapPoints = routeData.Points;
-                currentRoute.Distance = distance.BaseDistance;
-                currentRoute.DistanceUnits = (int)distance.BaseUnits;
-
-                MassiveDB.Current.UpdateRoute(currentRoute);
-
-                // get last run info
-                var runInfo = MassiveDB.Current.FindLatestRunLogForRoutes(new[] { routeData.Id }).FirstOrDefault();
-                if (runInfo == null)
+                if (currentRoute.MapPoints != routeData.Points)
                 {
-                    lastRunBy = "";
+                    // delete old
+                    currentRoute.RouteType = Route.DeletedRoute;
+                    MassiveDB.Current.UpdateRoute(currentRoute);
+
+                    // add new
+                    currentRoute = MassiveDB.Current.CreateRoute(ControllerContext.UserAccount(), routeData.Name, routeData.Notes ?? "", distance, (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute, routeData.Points, currentRoute.Id);
+                    routeData.Id = Convert.ToInt64(currentRoute.Id);
+
                     lastRun = "";
+                    lastRunBy = "";
                 }
                 else
                 {
-                    lastRunBy = runInfo.DisplayName;
-                    lastRun = runInfo.Date == null ? "" : runInfo.Date.ToString("ddd, dd/MMM/yyyy");
+                    currentRoute.Name = routeData.Name;
+                    currentRoute.Notes = routeData.Notes ?? "";
+                    currentRoute.RouteType = (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute;
+
+                    MassiveDB.Current.UpdateRoute(currentRoute);
+
+                    // get last run info
+                    var runInfo = MassiveDB.Current.FindLatestRunLogForRoutes(new[] { routeData.Id }).FirstOrDefault();
+                    if (runInfo == null)
+                    {
+                        lastRunBy = "";
+                        lastRun = "";
+                    }
+                    else
+                    {
+                        lastRunBy = runInfo.DisplayName;
+                        lastRun = runInfo.Date == null ? "" : runInfo.Date.ToString("ddd, dd/MMM/yyyy");
+                    }
                 }
             }
 

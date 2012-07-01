@@ -186,7 +186,7 @@
         } else {
             routeModel._route = new function() {
                 this._points = 0;
-                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 }]'; };
+                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
                 this.clear = function() { this._points = 0; };
                 this.addPoint = function(p) { this._points++; };
                 this.pointCount = function() { return this._points; }
@@ -195,7 +195,7 @@
             $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
             $('#fakeMap').click(function() {
                 routeModel.routeModified(true);
-                routeModel.distance(7.4);
+                routeModel.distance(7.7);
             });
         }
 
@@ -249,9 +249,15 @@
                                 alert('Could not save route: ' + result.Reason);
                                 return;
                             }
-                            var isSavedRoute = routeModel.routeId() > 0;
+                            var priorRouteId = routeModel.routeId();
+                            var isSavedRoute = priorRouteId > 0;
                             routeModel.reset(result.Route);
                             if (isSavedRoute) {
+                                if (priorRouteId != routeModel.routeId()) {
+                                    for (var i = 0; i < routeModel.myRoutes().length; i++)
+                                        if (routeModel.myRoutes()[i].routeId() == priorRouteId)
+                                            routeModel.myRoutes()[i].routeId(routeModel.routeId());
+                                }
                                 routeModel.refreshMyRoute(result.Route);
                             } else {
                                 routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance, result.Route.LastRun, result.Route.Notes, ''));
@@ -402,7 +408,7 @@
 
     <p>
     <strong>First time users: </strong> Don't worry, it will only take a few moments
-    and we only ask for your name. Simply use your Google, Twitter, Facebook, Yahoo, or MyOpenID
+    and we only ask for your name. Simply use your Google, Twitter, Yahoo, or MyOpenID
     account to login - and you're done! We won't have access to your password or email address.
     </p>
 </div>

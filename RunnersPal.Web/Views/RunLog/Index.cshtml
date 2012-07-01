@@ -80,6 +80,8 @@
             this.showAdd = ko.observable(true);
             this.showEdit = ko.observable(false);
             this.showDelete = ko.observable(false);
+            this.showViewRoute = ko.observable(false);
+            this.viewRoute = function() { alert('Show them the route!'); };
             this.myRoutes = ko.observableArray([
                 @foreach (var route in Model.Routes) {<text>
                 new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes'),</text>}
@@ -304,7 +306,7 @@
 		<div class="grid-row">
 			<div class="grid-cell grid-cell-20"><strong>Distance:</strong></div>
 			<div class="grid-cell-last grid-cell-80">
-                <div id="add-run-distance-selection"><strong><span data-bind="text: distanceDescription"></span></strong></div>
+                <div id="add-run-distance-selection"><strong><span data-bind="text: distanceDescription"></span></strong> <a href="#" data-bind="click: viewRoute, visible: showViewRoute">View the map of this route</a></div>
                 <div id="distanceSelection">
 	                <h3><a>Common routes</a></h3>
 	                <div id="distanceSelectionCommonRoutes">
@@ -314,8 +316,8 @@
 	                </div>
                     @if (Model.Routes.Any()) {
 	                <h3><a>My routes</a></h3>
-	                <div>
-                        <ul data-bind="template: { foreach: myRoutes }" style="max-height: 200px;">
+	                <div style="max-height: 200px;">
+                        <ul data-bind="template: { foreach: myRoutes }">
                             <li>
                                 <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
                                 <span data-bind="visible: showLastRun, text: lastRunText"></span>
@@ -324,7 +326,7 @@
 	                </div>
                     }
 	                <h3 id="tabFindARoute"><a>Find a route</a></h3>
-	                <div>
+	                <div style="max-height: 200px;">
                     <form id="findARoute">
                     <div>
                         <label for="findRouteName"><strong>Find route:</strong></label>
@@ -412,7 +414,7 @@
 
     <p>
     <strong>First time users: </strong> Don't worry, it will only take a few moments
-    and we only ask for your name. Simply use your Google, Twitter, Facebook, Yahoo, or MyOpenID
+    and we only ask for your name. Simply use your Google, Twitter, Yahoo, or MyOpenID
     account to login - and you're done! We won't have access to your password or email address.
     </p>
 </div>

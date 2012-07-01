@@ -8,6 +8,8 @@ using RunnersPal.Web.Controllers;
 using RunnersPal.Web.Models.Binders;
 using RunnersPal.Web.Models;
 using RunnersPal.Calculators;
+using RunnersPal.Web.Models.Auth;
+using System.Configuration;
 
 namespace RunnersPal.Web
 {
@@ -40,6 +42,9 @@ namespace RunnersPal.Web
 
             RegisterRoutes(RouteTable.Routes);
             RegisterModelBinders();
+
+            TwitterLogin.ConsumerKey = ConfigurationManager.AppSettings["TwitterConsumerKey"];
+            TwitterLogin.ConsumerSecret = ConfigurationManager.AppSettings["TwitterConsumerSecret"];
         }
 
         protected void Session_Start()

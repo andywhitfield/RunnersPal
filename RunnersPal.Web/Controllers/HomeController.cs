@@ -7,6 +7,9 @@ using DotNetOpenAuth.OpenId;
 using DotNetOpenAuth.OpenId.RelyingParty;
 using System.Web;
 using RunnersPal.Web.Extensions;
+using RunnersPal.Web.Models.Auth;
+using System.Globalization;
+using System.Configuration;
 
 namespace RunnersPal.Web.Controllers
 {
@@ -28,37 +31,92 @@ namespace RunnersPal.Web.Controllers
         [ValidateInput(false)]
         public ActionResult Login()
         {
+            var uri = Request.RawUrl;
+
             var response = openid.GetResponse();
             if (response == null)
             {
-                // login requested - redirect to openid / openauth provider
-                Identifier id;
-                if (Identifier.TryParse(Request.Form["openid_identifier"], out id))
+                if (!string.IsNullOrEmpty(Request["oauth_token"]))
                 {
-                    try
+                    if ((Session["login_service"] as string) == "twitter")
                     {
-                        var returnPage = Request.Form["return_page"];
-                        if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
-                        Uri returnPageUri;
-                        Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
-                        if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
-                            returnPage = Url.Content("~/");
+                        string name;
+                        int id;
+                        if (TwitterLogin.TryFinishSignInWithTwitter(out name, out id))
+                        {
+                            var openId = string.Format(CultureInfo.InvariantCulture, "http://twitter.com/{0}#{1}", name, id);
+                            
+                            Trace.TraceInformation("Completed openid auth: " + openId);
 
-                        Session["login_returnPage"] = returnPage;
-                        return openid.CreateRequest(Request.Form["openid_identifier"]).RedirectingResponse.AsActionResult();
+                            var userAccount = MassiveDB.Current.FindUser(openId);
+                            if (userAccount == null)
+                                userAccount = MassiveDB.Current.CreateUser(openId, Request.UserHostAddress, ControllerContext.UserDistanceUnits());
+
+                            HttpContext.Session["rp_UserAccount"] = userAccount;
+                            var cookie = new HttpCookie("rp_UserAccount", Secure.EncryptValue(userAccount.Id.ToString()));
+                            cookie.Expires = DateTime.UtcNow.AddYears(1);
+                            HttpContext.Response.AppendCookie(cookie);
+
+                            if (userAccount.UserType == "N")
+                            {
+                                Session["login_friendlyname"] = name;
+                                return RedirectToAction("FirstTime", "User");
+                            }
+
+                            var returnPage = Session["login_returnPage"] as string;
+                            if (string.IsNullOrWhiteSpace(returnPage))
+                                return RedirectToAction("Index", "Home");
+                            return Redirect(returnPage);
+                        }
                     }
-                    catch (ProtocolException ex)
-                    {
-                        Trace.TraceError("Error sending to openid: " + ex);
-                        ViewData["Message"] = ex.Message;
-                        return View("Index");
-                    }
+                }
+
+                // login requested - redirect to openid or openauth provider
+                var loginUri = Request.Form["openid_identifier"];
+
+                if (loginUri == "https://twitter.com/")
+                {
+                    var returnPage = Request.Form["return_page"];
+                    if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
+                    Uri returnPageUri;
+                    Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
+                    if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
+                        returnPage = Url.Content("~/");
+
+                    Session["login_returnPage"] = returnPage;
+                    Session["login_service"] = "twitter";
+                    return TwitterLogin.StartSignInWithTwitter(false).AsActionResult();
                 }
                 else
                 {
-                    Trace.TraceWarning("Invalid openid identifier!");
-                    ViewData["Message"] = "Invalid identifier";
-                    return View("Index");
+                    Identifier id;
+                    if (Identifier.TryParse(loginUri, out id))
+                    {
+                        try
+                        {
+                            var returnPage = Request.Form["return_page"];
+                            if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
+                            Uri returnPageUri;
+                            Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
+                            if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
+                                returnPage = Url.Content("~/");
+
+                            Session["login_returnPage"] = returnPage;
+                            return openid.CreateRequest(Request.Form["openid_identifier"]).RedirectingResponse.AsActionResult();
+                        }
+                        catch (ProtocolException ex)
+                        {
+                            Trace.TraceError("Error sending to openid: " + ex);
+                            ViewData["Message"] = ex.Message;
+                            return View("Index");
+                        }
+                    }
+                    else
+                    {
+                        Trace.TraceWarning("Invalid openid identifier!");
+                        ViewData["Message"] = "Invalid identifier";
+                        return View("Index");
+                    }
                 }
             }
             else
@@ -67,7 +125,6 @@ namespace RunnersPal.Web.Controllers
                 switch (response.Status)
                 {
                     case AuthenticationStatus.Authenticated:
-                        Session["FriendlyIdentifier"] = response.FriendlyIdentifierForDisplay;
                         Trace.TraceInformation("Completed openid auth: " + response.FriendlyIdentifierForDisplay);
 
                         var userAccount = MassiveDB.Current.FindUser(response.ClaimedIdentifier.ToString());

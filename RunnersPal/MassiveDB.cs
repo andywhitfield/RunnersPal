@@ -142,9 +142,9 @@ where l.UserAccountId = ua.Id", string.Join(", ", routeIds.Select(id => id.ToStr
 
             return routeMatches;
         }
-        public dynamic CreateRoute(dynamic creator, string name, string notes, Distance distance, char type, string points = null)
+        public dynamic CreateRoute(dynamic creator, string name, string notes, Distance distance, char type, string points = null, long? replacesRouteId = null)
         {
-            return new Route().Insert(new { Name = name, Notes = notes, Distance = distance.BaseDistance, DistanceUnits = (int)distance.BaseUnits, Creator = creator.Id, CreatedDate = DateTime.UtcNow, RouteType = type, MapPoints = points });
+            return new Route().Insert(new { Name = name, Notes = notes, Distance = distance.BaseDistance, DistanceUnits = (int)distance.BaseUnits, Creator = creator.Id, CreatedDate = DateTime.UtcNow, RouteType = type, MapPoints = points, ReplacesRouteId = replacesRouteId });
         }
         public void UpdateRoute(dynamic route)
         {

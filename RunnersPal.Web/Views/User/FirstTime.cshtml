@@ -8,7 +8,7 @@
         <div class="important">@ViewData["ErrorMessage"]</div>
     }
     <div>
-    Enter your name: <input type="text" name="name" value="" />
+    Enter your name: <input type="text" name="name" value="@Session["login_friendlyname"]" />
     </div>
     <div>
     <input type="submit" class="submit" value="Continue" />

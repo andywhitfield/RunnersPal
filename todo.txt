@@ -1,16 +1,20 @@
 next:
 
 route:pal - when viewing a public route, a save should save a copy (with prompt).
-route:pal - when saving a route, should we save a copy? We don't want to affect run log events
-            perhaps delete/new with a link? Perhaps only when MapPoints changes.
 run:log and route:pal...handle units change on my routes list
 run:log routes - integrate bingmaps...support saving a log event against a new route
 run:log - when viewing current run:log, if a mapped route, could provide link to route:pal (or perhaps inline)?
 check timezone...i.e. when adding an event, make sure it works when the client is in a US timezone, server is GMT/BST/whatever.
-login: support facebook + twitter (that will cover ALL users)
 route:pal/run:log - map start position
 route:pal/run:log - distance markers change/units change
+download all run:log events - just an ugly link at the moment. Needs to work when not logged in.
 errors: ajax errors in general; errors logging in (e.g. no openid endpoint)!
-final tidy up: remove anything that isn't implemented; clean up javascript/css; upload to github;
+final tidy up:
+  clean up HomeController login; remove anything that isn't implemented; clean up javascript/css; upload to github;
+probably need to think about security a bit more...if someone gets a user's login cookie, they become them.
 buy runnerspal.co.uk domain
 release!
+
+Post-release fixes/features:
+----------------------------
+login: support facebook
