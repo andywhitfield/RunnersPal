@@ -1,20 +1,27 @@
 next:
 
-route:pal - when viewing a public route, a save should save a copy (with prompt).
 run:log and route:pal...handle units change on my routes list
-run:log routes - integrate bingmaps...support saving a log event against a new route
 run:log - when viewing current run:log, if a mapped route, could provide link to route:pal (or perhaps inline)?
 check timezone...i.e. when adding an event, make sure it works when the client is in a US timezone, server is GMT/BST/whatever.
 route:pal/run:log - map start position
 route:pal/run:log - distance markers change/units change
 download all run:log events - just an ugly link at the moment. Needs to work when not logged in.
-errors: ajax errors in general; errors logging in (e.g. no openid endpoint)!
+errors:
+  ajax errors in general;
+  add run:log - I moved the slideUp call to within the callback fn, which works much
+                better when there are problems (e.g. missing mandatory fields), but doesn't
+				look so nice in a 'normal' add scenario as there is a lag between hitting the
+				button and the dialog dismissing.
+  errors logging in (e.g. no openid endpoint)!
 final tidy up:
-  clean up HomeController login; remove anything that isn't implemented; clean up javascript/css; upload to github;
-probably need to think about security a bit more...if someone gets a user's login cookie, they become them.
+  clean up HomeController login;
+  remove anything that isn't implemented;
+  clean up javascript/css;
+  upload to github;
 buy runnerspal.co.uk domain
 release!
 
 Post-release fixes/features:
 ----------------------------
+security: review login cookie...if someone gets a user's login cookie, they become them.
 login: support facebook

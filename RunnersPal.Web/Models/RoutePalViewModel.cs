@@ -9,6 +9,27 @@ namespace RunnersPal.Web.Models
 {
     public class RoutePalViewModel
     {
+        public static IEnumerable<RoutePalViewModel.RouteModel> RoutesForCurrentUser(ControllerContext context)
+        {
+            dynamic currentUser = context.HasValidUserAccount() ? context.UserAccount() : null;
+
+            IEnumerable<dynamic> routes = MassiveDB.Current.FindRoutes(currentUser);
+            routes = routes.Where(r => !string.IsNullOrWhiteSpace(r.MapPoints));
+
+            IEnumerable<dynamic> runInfos = MassiveDB.Current.FindLatestRunLogForRoutes(routes.Select(r => (long)r.Id));
+
+            var routeModels = routes.Select(route => new RoutePalViewModel.RouteModel(context, route)).ToList();
+            foreach (var route in routeModels)
+            {
+                var runInfo = runInfos.FirstOrDefault(r => r.RouteId == route.Id);
+                if (runInfo == null) continue;
+                route.LastRunBy = runInfo.DisplayName;
+                route.LastRunDate = runInfo.Date;
+            }
+
+            return routeModels.OrderByDescending(r => r.LastRunDate ?? r.CreatedDate);
+        }
+
         public class RouteModel
         {
             private readonly ControllerContext context;

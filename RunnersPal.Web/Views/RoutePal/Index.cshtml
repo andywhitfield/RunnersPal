@@ -1,5 +1,4 @@
-﻿@model RunnersPal.Web.Models.RoutePalViewModel
-@{
+﻿@{
     ViewBag.Title = "Route:Pal";
     ViewBag.SelectedTab = "RoutePal";
     ViewBag.Scripts = new[] { "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
@@ -62,6 +61,7 @@
         this.originalRoutePublic = ko.observable(false);
         this.routeModified = ko.observable(false);
         this.routePointCount = ko.observable(0);
+        this.routePublicOther = ko.observable(false);
         this.allowSave = ko.computed(function() {
             if (this.routeName() == "") return false;
             if (this.route != null && this.routePointCount() == 0) return false;
@@ -108,6 +108,7 @@
             this.originalRouteNotes(json.Notes);
             this.routePublic(json.Public);
             this.originalRoutePublic(json.Public);
+            this.routePublicOther(json.PublicOther);
             this.distance(0.00);
 
             if (this._route != null) {
@@ -122,10 +123,7 @@
             this.routeModified(false);
         };
 
-        this.myRoutes = ko.observableArray([
-            @foreach (var route in Model.Routes) {<text>
-            new MyRouteModel(this, @route.Id, "@route.Name", @route.Distance, '@route.LastRun', "@route.Notes", ''),</text>}
-        ]);
+        this.myRoutes = ko.observableArray([]);
         this.refreshMyRoute = function(json) {
             var myRoute = this.currentRoute();
             if (myRoute == null) return;
@@ -226,6 +224,11 @@
         $('#routeSave')
             .button({ icons: { primary: "ui-icon-circle-check" }, text: false })
             .click(function() {
+                // if a public route, prompt that a copy will be created
+                if (routeModel.routePublicOther()) {
+                    if (!window.confirm('This is a public route created by someone else. Saving the route will create a copy under your account - do you want to continue?')) return;
+                }
+
                 if (!loginAccountModel.isLoggedIn) {
                     loginPromptDialog.dialog('open');
                     loginPromptDialog.bind('dialogclose', function() {
@@ -250,9 +253,10 @@
                                 return;
                             }
                             var priorRouteId = routeModel.routeId();
+                            var priorPublicOther = routeModel.routePublicOther();
                             var isSavedRoute = priorRouteId > 0;
                             routeModel.reset(result.Route);
-                            if (isSavedRoute) {
+                            if (isSavedRoute && !priorPublicOther) {
                                 if (priorRouteId != routeModel.routeId()) {
                                     for (var i = 0; i < routeModel.myRoutes().length; i++)
                                         if (routeModel.myRoutes()[i].routeId() == priorRouteId)
@@ -311,6 +315,17 @@
             }
         };
         ko.applyBindings(routeModel);
+
+        $.post('@Url.Action("myroutes", "routepal")',
+            function (result) {
+                if (!result.Completed) {
+                    return;
+                }
+                routeModel.myRoutes.removeAll();
+                for (var i = 0; i < result.Routes.length; i++)
+                    routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+            }
+        );
 
         var routeId = parseInt(getParameterByName('route'));
         if (!isNaN(routeId)) {
@@ -375,7 +390,7 @@
             <button id="routeReset" data-bind="visible: routeId() > 0, buttonEnabled: allowSave()" title="Reset the points to the saved routed">Reset</button>
             <button id="routeUndo" data-bind="buttonEnabled: allowUndo()" title="Undo the last point added to the route">Undo</button>
             <button id="routeSave" data-bind="buttonEnabled: allowSave()" title="Save the route">Save</button>
-            <button id="routeDelete" data-bind="visible: routeId() > 0" title="Delete this route">Delete</button>
+            <button id="routeDelete" data-bind="visible: routeId() > 0 && !routePublicOther()" title="Delete this route">Delete</button>
 
             <div><label for="route-name"><strong>Name:</strong> (* required)</label></div>
             <div><input type="text" id="route-name" data-bind="value: routeName, valueUpdate: 'afterkeydown'" /></div>

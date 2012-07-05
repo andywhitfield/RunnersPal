@@ -11,7 +11,7 @@ namespace RunnersPal.Web.Controllers
     {
         public ActionResult Index()
         {
-            return View(new RunLogViewModel(ControllerContext, Enumerable.Empty<dynamic>()) { Routes = RoutePalController.RoutesForCurrentUser(ControllerContext) });
+            return View(new RunLogViewModel(ControllerContext, Enumerable.Empty<dynamic>()));
         }
 
         public ActionResult AllEvents()
@@ -100,9 +100,24 @@ namespace RunnersPal.Web.Controllers
             Distance distance = new Distance(newRunData.Distance ?? 0, userUnits);
             if (newRunData.Route.HasValue)
             {
-                route = MassiveDB.Current.FindRoute(newRunData.Route.Value);
-                if (route != null)
-                    distance = new Distance(route.Distance, (DistanceUnits)route.DistanceUnits);
+                var routeId = newRunData.Route.Value;
+                if (routeId > 0)
+                {
+                    route = MassiveDB.Current.FindRoute(routeId);
+                    if (route != null)
+                        distance = new Distance(route.Distance, (DistanceUnits)route.DistanceUnits);
+                }
+                else if (routeId == -2)
+                {
+                    // new mapped route
+                    if (newRunData.NewRoute == null)
+                        return Tuple.Create(new JsonResult { Data = new { Completed = false, Reason = "Please map a route, add a name and then add a run log event." } }, (object)null);
+                    if (string.IsNullOrWhiteSpace(newRunData.NewRoute.Name))
+                        return Tuple.Create(new JsonResult { Data = new { Completed = false, Reason = "Please provide a route name." } }, (object)null);
+                    if (string.IsNullOrWhiteSpace(newRunData.NewRoute.Points) || newRunData.NewRoute.Points == "[]")
+                        return Tuple.Create(new JsonResult { Data = new { Completed = false, Reason = "Please add some points to the new route by double-clicking the map." } }, (object)null);
+                    route = MassiveDB.Current.CreateRoute(ControllerContext.UserAccount(), newRunData.NewRoute.Name, newRunData.NewRoute.Notes ?? "", distance, (newRunData.NewRoute.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute, newRunData.NewRoute.Points);
+                }
             }
 
             var runLogEvent = MassiveDB.Current.CreateRunLogEvent(ControllerContext.UserAccount(), newRunData.Date.Value, distance, route, newRunData.NormalizedTime, newRunData.Comment);

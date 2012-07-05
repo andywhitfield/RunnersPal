@@ -31,5 +31,23 @@ namespace RunnersPal.Web.Models.Binders
                 val = parsedVal;
             return val;
         }
+
+        public static long? GetLong(this ModelBindingContext bindingContext, string field)
+        {
+            long? val = null;
+            long parsedVal;
+            if (long.TryParse(bindingContext.GetString(field), out parsedVal))
+                val = parsedVal;
+            return val;
+        }
+
+        public static bool? GetBool(this ModelBindingContext bindingContext, string field)
+        {
+            bool? val = null;
+            bool parsedVal;
+            if (bool.TryParse(bindingContext.GetString(field), out parsedVal))
+                val = parsedVal;
+            return val;
+        }
     }
 }

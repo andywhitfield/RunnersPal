@@ -10,27 +10,6 @@ namespace RunnersPal.Web.Controllers
 {
     public class RoutePalController : Controller
     {
-        public static IEnumerable<RoutePalViewModel.RouteModel> RoutesForCurrentUser(ControllerContext context)
-        {
-            dynamic currentUser = context.HasValidUserAccount() ? context.UserAccount() : null;
-
-            IEnumerable<dynamic> routes = MassiveDB.Current.FindRoutes(currentUser);
-            routes = routes.Where(r => !string.IsNullOrWhiteSpace(r.MapPoints));
-
-            IEnumerable<dynamic> runInfos = MassiveDB.Current.FindLatestRunLogForRoutes(routes.Select(r => (long)r.Id));
-
-            var routeModels = routes.Select(route => new RoutePalViewModel.RouteModel(context, route)).ToList();
-            foreach (var route in routeModels)
-            {
-                var runInfo = runInfos.FirstOrDefault(r => r.RouteId == route.Id);
-                if (runInfo == null) continue;
-                route.LastRunBy = runInfo.DisplayName;
-                route.LastRunDate = runInfo.Date;
-            }
-
-            return routeModels.OrderByDescending(r => r.LastRunDate ?? r.CreatedDate);
-        }
-
         public ActionResult Index()
         {
             if (Request.Params["save"] == "true")
@@ -57,7 +36,16 @@ namespace RunnersPal.Web.Controllers
                 }
             }
 
-            return View(new RoutePalViewModel { Routes = RoutesForCurrentUser(ControllerContext) });
+            return View();
+        }
+
+        [HttpPost]
+        public ActionResult MyRoutes()
+        {
+            return new JsonResult
+            {
+                Data = new { Completed = true, Routes = RoutePalViewModel.RoutesForCurrentUser(ControllerContext) }
+            };
         }
 
         [HttpPost]
@@ -73,10 +61,11 @@ namespace RunnersPal.Web.Controllers
                 return new JsonResult { Data = new { Completed = false, Reason = "Cannot find your route." } };
 
             var currentUser = ControllerContext.UserAccount();
-            if (route.RouteType == Route.PrivateRoute.ToString() && (currentUser == null || currentUser.Id != route.Creator))
+            var isRouteOwnedByAnotherUser = currentUser == null || currentUser.Id != route.Creator;
+            if (route.RouteType == Route.PrivateRoute.ToString() && isRouteOwnedByAnotherUser)
                 return new JsonResult { Data = new { Completed = false, Reason = "The route you are trying to load was either not created by you or is not public. Please check you are logged in and try again." } };
 
-            return new JsonResult { Data = new { Completed = true, Route = new { Id = route.Id, Name = route.Name, Notes = route.Notes ?? "", Public = route.RouteType == Route.PublicRoute.ToString(), Points = string.IsNullOrWhiteSpace(route.MapPoints) ? "[]" : route.MapPoints, Distance = route.Distance } } };
+            return new JsonResult { Data = new { Completed = true, Route = new { Id = route.Id, Name = route.Name, Notes = route.Notes ?? "", Public = route.RouteType == Route.PublicRoute.ToString(), Points = string.IsNullOrWhiteSpace(route.MapPoints) ? "[]" : route.MapPoints, Distance = route.Distance, PublicOther = route.RouteType == Route.PublicRoute.ToString() && isRouteOwnedByAnotherUser } } };
         }
 
         [HttpPost]
@@ -104,17 +93,23 @@ namespace RunnersPal.Web.Controllers
             else
             {
                 var currentRoute = MassiveDB.Current.FindRoute(routeData.Id);
-                if (currentRoute.Creator != ControllerContext.UserAccount().Id)
+                var currentUser = ControllerContext.UserAccount();
+                var isRouteOwnedByAnotherUser = currentUser.Id != currentRoute.Creator;
+
+                if (isRouteOwnedByAnotherUser && currentRoute.RouteType != Route.PublicRoute.ToString())
                     return new JsonResult { Data = new { Completed = false, Reason = "Cannot save the route - you can only save routes you have created." } };
 
-                if (currentRoute.MapPoints != routeData.Points)
+                if (isRouteOwnedByAnotherUser || currentRoute.MapPoints != routeData.Points)
                 {
-                    // delete old
-                    currentRoute.RouteType = Route.DeletedRoute;
-                    MassiveDB.Current.UpdateRoute(currentRoute);
+                    if (!isRouteOwnedByAnotherUser)
+                    {
+                        // delete old
+                        currentRoute.RouteType = Route.DeletedRoute;
+                        MassiveDB.Current.UpdateRoute(currentRoute);
+                    }
 
                     // add new
-                    currentRoute = MassiveDB.Current.CreateRoute(ControllerContext.UserAccount(), routeData.Name, routeData.Notes ?? "", distance, (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute, routeData.Points, currentRoute.Id);
+                    currentRoute = MassiveDB.Current.CreateRoute(currentUser, routeData.Name, routeData.Notes ?? "", distance, (routeData.Public ?? false) ? Route.PublicRoute : Route.PrivateRoute, routeData.Points, currentRoute.Id);
                     routeData.Id = Convert.ToInt64(currentRoute.Id);
 
                     lastRun = "";
@@ -143,7 +138,7 @@ namespace RunnersPal.Web.Controllers
                 }
             }
 
-            return new JsonResult { Data = new { Completed = true, Route = new { Id = routeData.Id, Name = routeData.Name, Notes = routeData.Notes ?? "", Public = routeData.Public ?? false, Points = routeData.Points, Distance = distance.BaseDistance, LastRun = lastRun } } };
+            return new JsonResult { Data = new { Completed = true, Route = new { Id = routeData.Id, Name = routeData.Name, Notes = routeData.Notes ?? "", Public = routeData.Public ?? false, Points = routeData.Points, Distance = distance.BaseDistance, LastRun = lastRun, PublicOther = false } } };
         }
 
         [HttpPost]

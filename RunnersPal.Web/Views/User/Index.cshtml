@@ -71,6 +71,8 @@
         unitsModel.change(function(u) {
             window.location.reload();
         });
+
+        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-document" } });
     });
 </script>
 
@@ -93,7 +95,7 @@
 } else {
     <strong>Year</strong>
 }
-<span style="float:right;"><a href="@Url.Action("download")">Download all Run:Log events</a></span>
+<span style="float:right;"><a id="downloadRunLogEvents" href="@Url.Action("download")">Download all Run:Log events</a></span>
 
 <div id="statsChart" style="min-width: 400px; height: 400px; margin: 0 auto"></div>
 <p></p>

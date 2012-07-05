@@ -3,7 +3,7 @@
     ViewBag.Title = "Run:Log";
     ViewBag.SelectedTab = "RunLog";
     ViewBag.Stylesheets = new[] { "~/Content/fullcalendar.css" };
-    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js" };
+    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
 }
 <script type="text/javascript">
     var newRunModel;
@@ -15,6 +15,8 @@
         var dd  = this.getDate().toString();
         return yyyy + '-' + (mm[1]?mm:"0"+mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]);
     };
+
+    var kmUnitMultiplier = 1 / 1.609344;
  
      function MyRouteModel(owner, id, name, distance, lastRunOn, notes) {
         var self = this;
@@ -40,6 +42,74 @@
         };
     }
 
+    function RouteMapping(model) {
+        var self = this;
+        self._route = null;
+        self._model = model;
+        self.routeName = ko.observable("");
+        self.routeNotes = ko.observable("");
+        self.routePublic = ko.observable(false);
+        self.routeModified = ko.observable(false);
+        self.routePointCount = ko.observable(0);
+        self.distance = ko.observable(0.00);
+        self.distanceDisplay = ko.computed(function() { return self.distance() == 0 ? "0" : self.distance().toFixed(4); }, self);
+        self.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        self.allowUndo = ko.computed(function() { return self.distanceDisplay() != "0" || (self.routePointCount() > 0); }, self);
+
+        self.addRoutePoint = function(p) {
+            if (self._route == null) return;
+            self._route.addPoint(p);
+            self.routePointCount(self._route.pointCount());
+            self.routeModified(true);
+            self.distance(self._route.totalDistance() * kmUnitMultiplier);
+        };
+        self.undoLastPoint = function() {
+            if (self._route == null) return;
+            self._route.undo();
+            self.routePointCount(self._route.pointCount());
+            self.routeModified(true);
+            self.distance(self._route.totalDistance() * kmUnitMultiplier);
+        };
+        self.pointsToJson = function() {
+            if (self._route == null) return "[]";
+            return self._route.toJson();
+        }
+
+        self.reset = function() {
+            self.routeName('');
+            self.routeNotes('');
+            self.routePublic(false);
+
+            self.distance(0.00);
+
+            if (self._route != null) {
+                self._route.clear();
+                self.routePointCount(self._route.pointCount());
+            }
+            self.routeModified(false);
+        };
+        self.updateParent = function(model, distance, routeName) {
+            if (typeof(model) == "undefined")
+                model = self._model;
+            if (typeof(distance) == "undefined")
+                distance = self.distance();
+            if (typeof(routeName) == "undefined")
+                routeName = self.routeName();
+
+            if (model == null) return;
+
+            if (distance > 0 && routeName != "") {
+                model.distance(distance.toFixed(4));
+                model.route(-2);
+            } else {
+                model.route(0);
+            }
+        }
+        self.routeChange = ko.computed(function() {
+            self.updateParent(self._model, self.distance(), self.routeName());
+        });
+    }
+
     $(function () {
         var AddRunModel = function () {
             var self = this;
@@ -49,7 +119,7 @@
             this.route = ko.observable(0);
             this.distance = ko.observable("0");
             this.distanceDescription = ko.computed(function () {
-                if (this.route() == -1)
+                if (this.route() < 0)
                     return this.distance() + " " + (this.distance() != 1 ? this.distanceUnits() : this.distanceUnitsSingular());
                 if (this.route() > 0)
                     return this.distance();
@@ -82,12 +152,10 @@
             this.showDelete = ko.observable(false);
             this.showViewRoute = ko.observable(false);
             this.viewRoute = function() { alert('Show them the route!'); };
-            this.myRoutes = ko.observableArray([
-                @foreach (var route in Model.Routes) {<text>
-                new MyRouteModel(this, @route.Id, '@route.Name', @route.Distance, '@route.LastRun', '@route.Notes'),</text>}
-            ]);
+            this.myRoutes = ko.observableArray([]);
             this.foundRoutes = ko.observableArray([]);
             this.foundRouteText = ko.observable("");
+            this.mapping = new RouteMapping(this);
         };
 
         var addRunDialog = $('#addRunDialog');
@@ -170,9 +238,12 @@
         });
 
         $('#add-run-submit-button').click(function () {
-            addRunDialog.slideUp('fast');
             var eventDate = newRunModel.eventDate();
-            $.post('@Url.Action("add", "runlog")', { date: eventDate.toUTCString(), distance: newRunModel.distance(), route: newRunModel.route(), time: newRunModel.time(), comment: newRunModel.comment() },
+            var routeId = newRunModel.route();
+            $.post('@Url.Action("add", "runlog")', { date: eventDate.toUTCString(), distance: newRunModel.distance(),
+                    route: routeId, time: newRunModel.time(), comment: newRunModel.comment(),
+                    newRouteName: newRunModel.mapping.routeName(), newRouteNotes: newRunModel.mapping.routeNotes(),
+                    newRoutePublic: newRunModel.mapping.routePublic(), newRoutePoints: newRunModel.mapping.pointsToJson() },
                 function (result) {
                     if (!result.Completed) {
                         // TODO: proper error
@@ -180,7 +251,12 @@
                         return;
                     }
 
+                    // TODO: the problem when putting this here is that there is a very perceptable delay when hitting the
+                    //       OK button of the add run dialog and the dialog sliding up.
+                    addRunDialog.slideUp('fast');
                     calendar.fullCalendar('refetchEvents');
+                    if (routeId < 0)
+                        fetchMyRoutes(newRunModel);
                 });
         });
         $('#update-run-submit-button').click(function () {
@@ -223,7 +299,7 @@
             newRunModel.distanceUnits(unitsModel.currentUnitsName);
             newRunModel.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
 
-            if (newRunModel.route() == -1)
+            if (newRunModel.route() < 0)
                 $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: newRunModel.distance(), distanceM: newRunModel.distance(), calc: unitsModel.currentUnitsName },
                     function (result) {
                         var newDistance = u == @((int)RunnersPal.DistanceUnits.Miles) ? result.DistanceM : result.DistanceKm;
@@ -250,6 +326,10 @@
                 newRunModel.distance("0");
                 newRunModel.route(-1);
                 ui.newContent.find('input').focus().select();
+            } else if (ui.newHeader.attr('id') == "tabMapNewRoute") {
+                newRunModel.route(0);
+                newRunModel.distance("0");
+                newRunModel.mapping.updateParent();
             } else {
                 newRunModel.route(0);
                 if (ui.newHeader.attr('id') == "tabFindARoute")
@@ -270,6 +350,47 @@
             calendar.fullCalendar('select', eventDate, eventDate, 1);
         }
 
+        if (typeof (Microsoft) != "undefined") {
+            var map = new Microsoft.Maps.Map($('#mapDiv')[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
+            Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
+                e.handled = true;
+                newRunModel.mapping.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
+            });
+            map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
+            var theRoute = new MapRoute(map);
+            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier);
+            newRunModel.mapping._route = theRoute;
+        } else {
+            newRunModel.mapping._route = new function() {
+                this._points = 0;
+                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
+                this.clear = function() { this._points = 0; };
+                this.addPoint = function(p) { this._points++; };
+                this.pointCount = function() { return this._points; }
+                this.totalDistance = function() { return this._points * 2; }
+            };
+            $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
+            $('#fakeMap').click(function() {
+                newRunModel.mapping.routeModified(true);
+                newRunModel.mapping.distance(7.7);
+            });
+        }
+
+        $('#routeNew')
+            .button({ icons: { primary: "ui-icon-newwin" }, text: false })
+            .click(function() {
+                if (newRunModel.mapping.routeModified() || newRunModel.mapping.routePointCount() > 0) {
+                    if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
+                }
+                newRunModel.mapping.reset();
+            });
+
+        $('#routeUndo')
+            .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
+            .click(function() {
+                newRunModel.mapping.undoLastPoint();
+            });
+
         $('#findARoute').submit(function() {
             var query = $('#q').val();
             $.post('@Url.Action("find", "routepal")', { q: query },
@@ -287,6 +408,22 @@
             );
             return false;
         });
+
+        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-document" } });
+
+        function fetchMyRoutes(model) {
+            $.post('@Url.Action("myroutes", "routepal")',
+                function (result) {
+                    if (!result.Completed) {
+                        return;
+                    }
+                    model.myRoutes.removeAll();
+                    for (var i = 0; i < result.Routes.length; i++)
+                        model.myRoutes.push(new MyRouteModel(model, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+                }
+            );
+        }
+        fetchMyRoutes(newRunModel);
     });
 </script>
 
@@ -314,8 +451,7 @@
                         <button data-route="@route.Id" data-distancedesc="@route.Name"></button><text>&nbsp;</text>
                         }
 	                </div>
-                    @if (Model.Routes.Any()) {
-	                <h3><a>My routes</a></h3>
+	                <h3 data-bind="visible: myRoutes().length > 0"><a>My routes</a></h3>
 	                <div style="max-height: 200px;">
                         <ul data-bind="template: { foreach: myRoutes }">
                             <li>
@@ -324,7 +460,6 @@
                             </li>
                         </ul>
 	                </div>
-                    }
 	                <h3 id="tabFindARoute"><a>Find a route</a></h3>
 	                <div style="max-height: 200px;">
                     <form id="findARoute">
@@ -344,9 +479,29 @@
                     </ul>
                     </form>
 	                </div>
-	                <h3><a>Map a new route</a></h3>
+	                <h3 id="tabMapNewRoute"><a>Map a new route</a></h3>
 	                <div>
-                        Big map section!
+                        <div style="position: relative; float: right; z-index: 10; background-color: #efefef; width: 180px; padding: 5px;">
+                            <button id="routeNew" title="Clear all the points and start a new route">New</button>
+                            <button id="routeUndo" data-bind="buttonEnabled: mapping.allowUndo()" title="Undo the last point added to the route">Undo</button>
+
+                            <div><label for="route-name"><strong>Name:</strong> (* required)</label></div>
+                            <div><input type="text" id="route-name" data-bind="value: mapping.routeName, valueUpdate: 'afterkeydown'" /></div>
+
+                            <div>
+                                <strong>Distance:</strong>
+                                <span data-bind="text: mapping.distanceDisplay">0</span> <span data-bind="text: mapping.distanceUnits">miles</span>
+                            </div>
+
+                            <div><label for="route-notes"><strong>Route Notes:</strong></label></div>
+                            <div><textarea id="route-notes" rows="4" cols="20" style="width: 150px;" data-bind="value: mapping.routeNotes, valueUpdate: 'afterkeydown'"></textarea></div>
+
+                            <div>
+                                <label for="route-public" title="If checked, allows everyone to view this route"><strong>Public Route:</strong></label>
+                                <input type="checkbox" id="route-public" data-bind="checked: mapping.routePublic" title="If checked, allows everyone to view this route" />
+                            </div>
+                        </div>
+                        <div id="mapDiv" style="position:relative; width:auto; height:400px;"></div>
 	                </div>
 	                <h3 id="enterManualDistance"><a>Enter a manual distance</a></h3>
 	                <div>
@@ -422,5 +577,5 @@
 <div id="calendar"></div>
 
 <div>
-<a href="@Url.Action("download", "user")">Download all Run:Log events</a>
+<a id="downloadRunLogEvents" href="@Url.Action("download", "user")">Download all Run:Log events</a>
 </div>

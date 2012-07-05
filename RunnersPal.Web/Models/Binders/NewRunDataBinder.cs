@@ -12,45 +12,32 @@ namespace RunnersPal.Web.Models.Binders
         {
             DateTime? date = null;
             DateTime parsedDate;
-            Trace.TraceInformation("Parsing date: {0}", Get(bindingContext, "date"));
-            if (DateTime.TryParseExact(Get(bindingContext, "date"), "ddd, d MMM yyyy HH':'mm':'ss 'UTC'", null, DateTimeStyles.AssumeUniversal, out parsedDate))
+            Trace.TraceInformation("Parsing date: {0}", bindingContext.GetString("date"));
+            if (DateTime.TryParseExact(bindingContext.GetString("date"), "ddd, d MMM yyyy HH':'mm':'ss 'UTC'", null, DateTimeStyles.AssumeUniversal, out parsedDate))
                 date = parsedDate;
-            if (DateTime.TryParseExact(Get(bindingContext, "date"), "ddd, d MMM yyyy HH':'mm':'ss 'GMT'", null, DateTimeStyles.AssumeUniversal, out parsedDate))
+            if (DateTime.TryParseExact(bindingContext.GetString("date"), "ddd, d MMM yyyy HH':'mm':'ss 'GMT'", null, DateTimeStyles.AssumeUniversal, out parsedDate))
                 date = parsedDate;
-
-            long? route = null;
-            long parsedRoute;
-            if (long.TryParse(Get(bindingContext, "route"), out parsedRoute))
-                route = parsedRoute;
-
-            double? distance = null;
-            double parsedDistance;
-            if (double.TryParse(Get(bindingContext, "distance"), out parsedDistance))
-                distance = parsedDistance;
-
-            long? runLogId = null;
-            long parsedRunLogId;
-            if (long.TryParse(Get(bindingContext, "runLogId"), out parsedRunLogId))
-                runLogId = parsedRunLogId;
 
             OnModelUpdating(controllerContext, bindingContext);
             bindingContext.ModelMetadata.Model = new NewRunData
             {
-                RunLogId = runLogId,
+                RunLogId = bindingContext.GetLong("runLogId"),
                 Date = date,
-                Distance = distance,
-                Route = route,
-                Time = Get(bindingContext, "time"),
-                Comment = Get(bindingContext, "comment").MaxLength(1000)
+                Distance = bindingContext.GetDouble("distance"),
+                Route = bindingContext.GetLong("route"),
+                Time = bindingContext.GetString("time"),
+                Comment = bindingContext.GetString("comment").MaxLength(1000),
+                NewRoute = new RouteData
+                {
+                    Distance = bindingContext.GetDouble("distance") ?? 0.0,
+                    Name = bindingContext.GetString("newRouteName"),
+                    Notes = bindingContext.GetString("newRouteNotes"),
+                    Points = bindingContext.GetString("newRoutePoints"),
+                    Public = bindingContext.GetBool("newRoutePublic")
+                }
             };
             OnModelUpdated(controllerContext, bindingContext);
             return bindingContext.Model;
-        }
-
-        public string Get(ModelBindingContext bindingContext, string field)
-        {
-            var value = bindingContext.ValueProvider.GetValue(field);
-            return value != null ? value.AttemptedValue : "";
         }
     }
 }

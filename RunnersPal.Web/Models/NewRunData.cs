@@ -28,5 +28,7 @@ namespace RunnersPal.Web.Models
         }
 
         public string Comment { get; set; }
+
+        public RouteData NewRoute { get; set; }
     }
 }
