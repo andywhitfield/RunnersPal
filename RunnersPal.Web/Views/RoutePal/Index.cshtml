@@ -315,24 +315,19 @@
             }
         };
         ko.applyBindings(routeModel);
-
-        $.post('@Url.Action("myroutes", "routepal")',
-            function (result) {
-                if (!result.Completed) {
-                    return;
-                }
-                routeModel.myRoutes.removeAll();
-                for (var i = 0; i < result.Routes.length; i++)
-                    routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+        loadMyRoutes(routeModel, function() {
+            var routeId = parseInt(getParameterByName('route'));
+            if (!isNaN(routeId)) {
+                for (var i = 0; i < routeModel.myRoutes().length; i++)
+                    if (routeModel.myRoutes()[i].routeId() == routeId)
+                        routeModel.myRoutes()[i].loadRoute();
             }
-        );
+        });
 
-        var routeId = parseInt(getParameterByName('route'));
-        if (!isNaN(routeId)) {
-            for (var i = 0; i < routeModel.myRoutes().length; i++)
-                if (routeModel.myRoutes()[i].routeId() == routeId)
-                    routeModel.myRoutes()[i].loadRoute();
-        }
+        unitsModel.change(function (u) {
+            routeModel.distanceUnits(unitsModel.currentUnitsName);
+            loadMyRoutes(routeModel);
+        });
     });
 
     function getParameterByName(name) { 
@@ -344,7 +339,22 @@
         return ""; 
       else 
         return decodeURIComponent(results[1].replace(/\+/g, " ")); 
-    } 
+    }
+
+    function loadMyRoutes(model, callback) {
+        $.post('@Url.Action("myroutes", "routepal")',
+            function (result) {
+                if (!result.Completed) {
+                    return;
+                }
+                model.myRoutes.removeAll();
+                for (var i = 0; i < result.Routes.length; i++)
+                    model.myRoutes.push(new MyRouteModel(model, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+
+                if (typeof(callback) == 'function') callback();
+            }
+        );
+    }
 </script>
 
 <h1>Routes</h1>

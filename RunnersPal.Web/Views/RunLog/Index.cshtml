@@ -155,6 +155,7 @@
             this.myRoutes = ko.observableArray([]);
             this.foundRoutes = ko.observableArray([]);
             this.foundRouteText = ko.observable("");
+            this.applyOpenRouteBtn = function() { $('.openRoute').button({ icons: { primary: "ui-icon-document" }, text: false }); };
             this.mapping = new RouteMapping(this);
         };
 
@@ -310,6 +311,9 @@
 
             if (newRunModel.route() > 0)
                 newRunModel.distance(newRunModel.distance() + " ");
+            
+            fetchMyRoutes(newRunModel);
+            newRunModel.mapping.distanceUnits(unitsModel.currentUnitsName);
         });
 
         $("#distanceSelection").accordion({
@@ -453,9 +457,9 @@
 	                </div>
 	                <h3 data-bind="visible: myRoutes().length > 0"><a>My routes</a></h3>
 	                <div style="max-height: 200px;">
-                        <ul data-bind="template: { foreach: myRoutes }">
+                        <ul data-bind="template: { foreach: myRoutes, afterRender: applyOpenRouteBtn }">
                             <li>
-                                <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+                                <a class="openRoute" href="#" target="_blank" title="Open a map of the route in a new window" data-bind="attr: { href: '@Url.Action("", "routepal")' + '?route=' + routeId() }"></a> <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
                                 <span data-bind="visible: showLastRun, text: lastRunText"></span>
                             </li>
                         </ul>
@@ -471,9 +475,9 @@
         
                     <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() == ''">Enter a search term to find a route.</div>
                     <div data-bind="visible: foundRoutes().length == 0 && foundRouteText() != '', text: foundRouteText"></div>
-                    <ul data-bind="template: { foreach: foundRoutes }">
+                    <ul data-bind="template: { foreach: foundRoutes, afterRender: applyOpenRouteBtn }">
                         <li>
-                            <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
+                            <a class="openRoute" href="#" target="_blank" title="Open a map of the route in a new window" data-bind="attr: { href: '@Url.Action("", "routepal")' + '?route=' + routeId() }"></a> <a href="#" data-bind="click: chooseRoute, text: routeName, attr: { title: routeNotes }"></a>, <span data-bind="text: distance"></span> <span data-bind="text: distanceUnits"></span>.
                             <span data-bind="visible: showLastRun, text: lastRunText"></span>
                         </li>
                     </ul>
