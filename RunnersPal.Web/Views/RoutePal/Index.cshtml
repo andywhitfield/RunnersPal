@@ -7,7 +7,7 @@
 #routeManagement { height: 500px; }
 </style>
 <script type="text/javascript">
-    var kmUnitMultiplier = 1 / 1.609344;
+    var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
 
     function MyRouteModel(routeModel, id, name, distance, lastRunOn, notes, lastRunBy) {
         var self = this;
@@ -83,14 +83,14 @@
             this._route.addPoint(p);
             this.routePointCount(this._route.pointCount());
             this.routeModified(true);
-            this.distance(this._route.totalDistance() * kmUnitMultiplier);
+            this.distance(this._route.totalDistance() * kmUnitMultiplier());
         };
         this.undoLastPoint = function() {
             if (this._route == null) return;
             this._route.undo();
             this.routePointCount(this._route.pointCount());
             this.routeModified(true);
-            this.distance(this._route.totalDistance() * kmUnitMultiplier);
+            this.distance(this._route.totalDistance() * kmUnitMultiplier());
         };
         this.pointsToJson = function() {
             if (this._route == null) return "[]";
@@ -121,6 +121,16 @@
                 }
             }
             this.routeModified(false);
+        };
+        this.redrawRoute = function() {
+            this.distance(0.00);
+            if (this._route != null) {
+                var points = this._route.points();
+                this._route.distanceMarkerUnits(1 / kmUnitMultiplier());
+                this._route.clear();
+                for (var i = 0; i < points.length; i++)
+                    this.addRoutePoint(points[i].toMapsLocation());
+            }
         };
 
         this.myRoutes = ko.observableArray([]);
@@ -179,7 +189,7 @@
             });
             map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
             var theRoute = new MapRoute(map);
-            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier);
+            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
             routeModel._route = theRoute;
         } else {
             routeModel._route = new function() {
@@ -326,6 +336,7 @@
 
         unitsModel.change(function (u) {
             routeModel.distanceUnits(unitsModel.currentUnitsName);
+            routeModel.redrawRoute();
             loadMyRoutes(routeModel);
         });
     });

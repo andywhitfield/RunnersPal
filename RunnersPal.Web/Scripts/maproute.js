@@ -138,6 +138,8 @@ MapRoute.prototype.addPoint = function (location) {
         return;
     }
 
+    if (this.lastPoint().latitude() == location.latitude && this.lastPoint().longitude() == location.longitude) return;
+
     if (this.lastPoint().isPushpin('e')) this.removeLastPoint();
     var loc = new MapPoint(location.latitude, location.longitude, 'p');
 
