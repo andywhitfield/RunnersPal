@@ -52,12 +52,12 @@ namespace RunnersPal.Web.Controllers
         public ActionResult Load(long? id)
         {
             if (!id.HasValue || id < 1)
-                return new JsonResult { Data = new { Completed = false, Reason = "No route provided." } };
+                return new JsonResult { Data = new { Completed = false, Reason = "No route was provided." } };
 
-            var route = MassiveDB.Current.FindRoute(id.Value);
+            var route = MassiveDB.Current.FindRoute(id.Value, true);
             if (route == null)
-                return new JsonResult { Data = new { Completed = false, Reason = "Cannot find specified route." } };
-            if (route.RouteType != Route.PublicRoute.ToString() && route.RouteType != Route.PrivateRoute.ToString())
+                return new JsonResult { Data = new { Completed = false, Reason = "Cannot find the specified route." } };
+            if (route.RouteType == Route.SystemRoute.ToString())
                 return new JsonResult { Data = new { Completed = false, Reason = "Cannot find your route." } };
 
             var currentUser = ControllerContext.UserAccount();
@@ -65,7 +65,7 @@ namespace RunnersPal.Web.Controllers
             if (route.RouteType == Route.PrivateRoute.ToString() && isRouteOwnedByAnotherUser)
                 return new JsonResult { Data = new { Completed = false, Reason = "The route you are trying to load was either not created by you or is not public. Please check you are logged in and try again." } };
 
-            return new JsonResult { Data = new { Completed = true, Route = new { Id = route.Id, Name = route.Name, Notes = route.Notes ?? "", Public = route.RouteType == Route.PublicRoute.ToString(), Points = string.IsNullOrWhiteSpace(route.MapPoints) ? "[]" : route.MapPoints, Distance = route.Distance, PublicOther = route.RouteType == Route.PublicRoute.ToString() && isRouteOwnedByAnotherUser } } };
+            return new JsonResult { Data = new { Completed = true, Route = new { Id = route.Id, Name = route.Name, Notes = route.Notes ?? "", Public = route.RouteType == Route.PublicRoute.ToString(), Points = string.IsNullOrWhiteSpace(route.MapPoints) ? "[]" : route.MapPoints, Distance = route.Distance, PublicOther = route.RouteType == Route.PublicRoute.ToString() && isRouteOwnedByAnotherUser, Deleted = route.RouteType == Route.DeletedRoute.ToString() } } };
         }
 
         [HttpPost]
@@ -138,14 +138,14 @@ namespace RunnersPal.Web.Controllers
                 }
             }
 
-            return new JsonResult { Data = new { Completed = true, Route = new { Id = routeData.Id, Name = routeData.Name, Notes = routeData.Notes ?? "", Public = routeData.Public ?? false, Points = routeData.Points, Distance = distance.BaseDistance, LastRun = lastRun, PublicOther = false } } };
+            return new JsonResult { Data = new { Completed = true, Route = new { Id = routeData.Id, Name = routeData.Name, Notes = routeData.Notes ?? "", Public = routeData.Public ?? false, Points = routeData.Points, Distance = distance.BaseDistance, LastRun = lastRun, PublicOther = false, Deleted = false } } };
         }
 
         [HttpPost]
         public ActionResult Delete(long? id)
         {
             if (!id.HasValue || id < 1)
-                return new JsonResult { Data = new { Completed = false, Reason = "No route provided." } };
+                return new JsonResult { Data = new { Completed = false, Reason = "No route was provided." } };
 
             var currentUser = ControllerContext.UserAccount();
             if (currentUser == null)
@@ -153,12 +153,12 @@ namespace RunnersPal.Web.Controllers
 
             var route = MassiveDB.Current.FindRoute(id.Value);
             if (route == null)
-                return new JsonResult { Data = new { Completed = false, Reason = "Cannot find specified route." } };
+                return new JsonResult { Data = new { Completed = false, Reason = "Cannot find the specified route." } };
             if (route.RouteType != Route.PublicRoute.ToString() && route.RouteType != Route.PrivateRoute.ToString())
                 return new JsonResult { Data = new { Completed = false, Reason = "Cannot find your route." } };
 
             if (currentUser.Id != route.Creator || currentUser.UserType == "A")
-                return new JsonResult { Data = new { Completed = false, Reason = "The route you are trying to load was not created by you. Please check you are logged in as the correct account and try again." } };
+                return new JsonResult { Data = new { Completed = false, Reason = "The route you are trying to delete was not created by you. Please check you are logged in correctly and try again." } };
 
             route.RouteType = Route.DeletedRoute;
             MassiveDB.Current.UpdateRoute(route);

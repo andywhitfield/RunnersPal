@@ -40,8 +40,7 @@
             $.post('@Url.Action("load", "routepal")', { id: self.routeId() },
                 function (result) {
                     if (!result.Completed) {
-                        // TODO: proper error
-                        alert('Could not load route: ' + result.Reason);
+                        alert('There was a problem loading your route.\n\nMore details:\n' + result.Reason);
                         return;
                     }
                     callback(result.Route);
@@ -62,8 +61,9 @@
         this.routeModified = ko.observable(false);
         this.routePointCount = ko.observable(0);
         this.routePublicOther = ko.observable(false);
+        this.routeDeleted = ko.observable(false);
         this.allowSave = ko.computed(function() {
-            if (this.routeName() == "") return false;
+            if (this.routeName() == "" || this.routeDeleted()) return false;
             if (this.route != null && this.routePointCount() == 0) return false;
             if (this.routeModified()) return true;
             if (this.routeId() > 0) {
@@ -72,6 +72,9 @@
                 if (this.routePublic() != this.originalRoutePublic()) return true;
             }
             return false;
+        }, this);
+        this.allowDelete = ko.computed(function() {
+            return this.routeId() > 0 && !this.routePublicOther() && !this.routeDeleted();
         }, this);
         this.distance = ko.observable(0.00);
         this.distanceDisplay = ko.computed(function() { return this.distance() == 0 ? "0" : this.distance().toFixed(4); }, this);
@@ -109,6 +112,7 @@
             this.routePublic(json.Public);
             this.originalRoutePublic(json.Public);
             this.routePublicOther(json.PublicOther);
+            this.routeDeleted(json.Deleted);
             this.distance(0.00);
 
             if (this._route != null) {
@@ -187,18 +191,30 @@
                 e.handled = true;
                 routeModel.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
             });
-            map.setView({ zoom: 16, center: new Microsoft.Maps.Location(51.51, -0.10) });
+            map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
+
+            if (typeof(navigator) != "undefined" && typeof(navigator.geolocation) != "undefined" && typeof(navigator.geolocation.getCurrentPosition) == "function") {
+                navigator.geolocation.getCurrentPosition(
+                  function(pos) {
+                    map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
+                  },
+                  function() { }
+                );
+            }
+
             var theRoute = new MapRoute(map);
             theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
             routeModel._route = theRoute;
         } else {
             routeModel._route = new function() {
-                this._points = 0;
+                this._points = [];
                 this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
-                this.clear = function() { this._points = 0; };
-                this.addPoint = function(p) { this._points++; };
-                this.pointCount = function() { return this._points; }
-                this.totalDistance = function() { return this._points * 2; }
+                this.clear = function() { this._points = []; };
+                this.addPoint = function(p) { this._points.push(p); };
+                this.pointCount = function() { return this._points.length; };
+                this.totalDistance = function() { return this.pointCount() * 2; };
+                this.distanceMarkerUnits = function(u) { return 1; };
+                this.points = function() { return this._points; };
             };
             $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
             $('#fakeMap').click(function() {
@@ -222,7 +238,9 @@
                 if (routeModel.allowSave()) {
                     if (!window.confirm('This will undo all the changes you\'ve made to the current route - are you sure you want to continue?')) return;
                 }
-                routeModel.currentRoute().reload(function(result) { routeModel.reset(result); });
+                var curRoute = routeModel.currentRoute();
+                if (curRoute != null) curRoute.reload(function(result) { routeModel.reset(result); });
+                else new MyRouteModel(routeModel, routeModel.routeId(), '', 0, '', '', '').loadRoute();
             });
 
         $('#routeUndo')
@@ -245,8 +263,7 @@
                         $.post('@Url.Action("beforelogin", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
                             function (result) {
                                 if (!result.Completed) {
-                                    // TODO: proper error
-                                    alert('Could not save route: ' + result.Reason);
+                                    alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
                                     return;
                                 }
                                 loginAccountModel.showLoginDialog();
@@ -258,8 +275,7 @@
                     $.post('@Url.Action("save", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
                         function (result) {
                             if (!result.Completed) {
-                                // TODO: proper error
-                                alert('Could not save route: ' + result.Reason);
+                                alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
                                 return;
                             }
                             var priorRouteId = routeModel.routeId();
@@ -289,8 +305,7 @@
                 $.post('@Url.Action("delete", "routepal")', { id: routeModel.routeId() },
                     function (result) {
                         if (!result.Completed) {
-                            // TODO: proper error
-                            alert('Could not delete route: ' + result.Reason);
+                            alert('There was a problem deleting this route.\n\nMore details:\n' + result.Reason);
                             return;
                         }
                         for (var i = 0; i < routeModel.myRoutes().length; i++)
@@ -329,8 +344,12 @@
             var routeId = parseInt(getParameterByName('route'));
             if (!isNaN(routeId)) {
                 for (var i = 0; i < routeModel.myRoutes().length; i++)
-                    if (routeModel.myRoutes()[i].routeId() == routeId)
+                    if (routeModel.myRoutes()[i].routeId() == routeId) {
                         routeModel.myRoutes()[i].loadRoute();
+                        return;
+                    }
+                // not one of my routes, perhaps it's a public route, so load it up:
+                new MyRouteModel(routeModel, routeId, '', 0, '', '', '').loadRoute();
             }
         });
 
@@ -411,7 +430,7 @@
             <button id="routeReset" data-bind="visible: routeId() > 0, buttonEnabled: allowSave()" title="Reset the points to the saved routed">Reset</button>
             <button id="routeUndo" data-bind="buttonEnabled: allowUndo()" title="Undo the last point added to the route">Undo</button>
             <button id="routeSave" data-bind="buttonEnabled: allowSave()" title="Save the route">Save</button>
-            <button id="routeDelete" data-bind="visible: routeId() > 0 && !routePublicOther()" title="Delete this route">Delete</button>
+            <button id="routeDelete" data-bind="visible: allowDelete()" title="Delete this route">Delete</button>
 
             <div><label for="route-name"><strong>Name:</strong> (* required)</label></div>
             <div><input type="text" id="route-name" data-bind="value: routeName, valueUpdate: 'afterkeydown'" /></div>
@@ -428,6 +447,8 @@
                 <label for="route-public" title="If checked, allows everyone to view this route"><strong>Public Route:</strong></label>
                 <input type="checkbox" id="route-public" data-bind="checked: routePublic" title="If checked, allows everyone to view this route" />
             </div>
+
+            <div data-bind="visible: routeDeleted()"><span class="important">Note: </span> This route has been deleted.</div>
         </div>
         <div id="mapDiv" style="position:relative; width:auto; height:100%"></div>
 	</div>
