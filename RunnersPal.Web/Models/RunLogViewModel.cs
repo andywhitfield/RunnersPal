@@ -62,6 +62,7 @@ namespace RunnersPal.Web.Models
 
             public object RunLogEventToJson()
             {
+                var systemRoute = Route.RouteType == RunnersPal.Route.SystemRoute.ToString();
                 return new
                 {
                     Completed = true,
@@ -69,13 +70,13 @@ namespace RunnersPal.Web.Models
                     title = Title,
                     start = RunLogEvent.Date.ToString("dd MMM yyyy"),
                     date = RunLogEvent.Date.ToString("dd MMM yyyy"),
-                    distance = string.IsNullOrWhiteSpace(Route.MapPoints)
+                    distance = string.IsNullOrWhiteSpace(Route.MapPoints) && !systemRoute
                                ? Distance.BaseDistance.ToString("0.##")
-                               : Route.RouteType == RunnersPal.Route.SystemRoute.ToString() ? Route.Name : (Route.Name + ", " + Distance.BaseDistance.ToString("0.##") + " " + Distance.BaseUnits.UnitsToString("a")),
+                               : systemRoute ? Route.Name : (Route.Name + ", " + Distance.BaseDistance.ToString("0.##") + " " + Distance.BaseUnits.UnitsToString("a")),
                     pace = Pace.Pace,
                     time = TimeTaken,
-                    route = string.IsNullOrWhiteSpace(Route.MapPoints) ? -1 : Route.Id,
-                    routeType = Route.RouteType == RunnersPal.Route.SystemRoute.ToString() ? "common" : "user",
+                    route = string.IsNullOrWhiteSpace(Route.MapPoints) && !systemRoute ? -1 : Route.Id,
+                    routeType = systemRoute ? "common" : "user",
                     comment = RunLogEvent.Comment
                 };
             }

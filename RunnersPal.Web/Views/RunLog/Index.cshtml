@@ -220,8 +220,7 @@
                 $.post('@Url.Action("view", "runlog")', { runlogid: evt.id },
                     function (result) {
                         if (!result.Completed) {
-                            // TODO: proper error handling
-                            alert('Could not view event: ' + result.Reason);
+                            alert('Could not open event.\n\n' + result.Reason);
                             return;
                         }
 
@@ -260,13 +259,10 @@
                     newRoutePublic: newRunModel.mapping.routePublic(), newRoutePoints: newRunModel.mapping.pointsToJson() },
                 function (result) {
                     if (!result.Completed) {
-                        // TODO: proper error
-                        alert('Could not add event: ' + result.Reason);
+                        alert('Could not add event.\n\n' + result.Reason);
                         return;
                     }
 
-                    // TODO: the problem when putting this here is that there is a very perceptable delay when hitting the
-                    //       OK button of the add run dialog and the dialog sliding up.
                     addRunDialog.slideUp('fast');
                     calendar.fullCalendar('refetchEvents');
                     if (routeId < 0)
@@ -274,30 +270,28 @@
                 });
         });
         $('#update-run-submit-button').click(function () {
-            addRunDialog.slideUp('fast');
             var eventDate = newRunModel.eventDate();
             $.post('@Url.Action("edit", "runlog")', { runLogId: newRunModel.runLogId(), date: eventDate.toUTCString(), distance: newRunModel.distance(), route: newRunModel.route(), time: newRunModel.time(), comment: newRunModel.comment() },
                 function (result) {
                     if (!result.Completed) {
-                        // TODO: proper error
-                        alert('Could not add event: ' + result.Reason);
+                        alert('Could not update this event\n\n' + result.Reason);
                         return;
                     }
 
+                    addRunDialog.slideUp('fast');
                     calendar.fullCalendar('refetchEvents');
                 })
         });
         $('#delete-run-submit-button').click(function () {
-            addRunDialog.slideUp('fast');
             var eventDate = newRunModel.eventDate();
             $.post('@Url.Action("delete", "runlog")', { runLogId: newRunModel.runLogId() },
                 function (result) {
                     if (!result.Completed) {
-                        // TODO: proper error
-                        alert('Could not delete event: ' + result.Reason);
+                        alert('Could not delete this event.\n\n' + result.Reason);
                         return;
                     }
 
+                    addRunDialog.slideUp('fast');
                     calendar.fullCalendar('refetchEvents');
                 })
         });
@@ -346,7 +340,7 @@
                 newRunModel.routeType("");
                 ui.newContent.find('input').focus().select();
             } else if (ui.newHeader.attr('id') == "tabMapNewRoute") {
-                newRunModel.route(0);
+                newRunModel.route(-2);
                 newRunModel.routeType("");
                 newRunModel.distance("0");
                 newRunModel.mapping.updateParent();
@@ -357,7 +351,7 @@
                     $('#q').focus().select();
             }
         });
-        $('#distanceSelectionCommonRoutes > button')
+        $('.distanceSelectionCommonRoutes > li > a')
             .text(function () { return $(this).attr('data-distancedesc'); })
             .click(function () {
                 newRunModel.route($(this).attr('data-route'));
@@ -480,10 +474,26 @@
                 <div id="add-run-distance-selection"><a class="openRoute" href="#" target="_blank" title="Open a map of the route in a new window" data-bind="visible: showViewRoute, attr: { href: '@Url.Action("", "routepal")' + '?route=' + route() }"></a> <strong><span data-bind="text: distanceDescription"></span></strong></div>
                 <div id="distanceSelection">
 	                <h3><a>Common routes</a></h3>
-	                <div id="distanceSelectionCommonRoutes">
-                        @foreach (var route in RunnersPal.MassiveDB.Current.GetCommonRoutes()) {
-                        <button data-route="@route.Id" data-distancedesc="@route.Name"></button><text>&nbsp;</text>
-                        }
+	                <div>
+                        <div class="grid">
+                            <div class="grid-row">
+                                <div class="grid-cell grid-cell-50">
+                                    <ul class="distanceSelectionCommonRoutes">
+                                    @foreach (var route in RunnersPal.MassiveDB.Current.GetCommonRoutes().Take(4)) {
+                                    <li><a href="#" data-route="@route.Id" data-distancedesc="@route.Name"></a></li>
+                                    }
+                                    </ul>
+                                </div>
+                                <div class="grid-cell grid-cell-50">
+                                    <ul class="distanceSelectionCommonRoutes">
+                                    @foreach (var route in RunnersPal.MassiveDB.Current.GetCommonRoutes().Skip(4)) {
+                                    <li><a href="#" data-route="@route.Id" data-distancedesc="@route.Name"></a></li>
+                                    }
+                                    </ul>
+                                </div>
+                                <div class="grid-cell-end"></div>
+                            </div>
+                        </div>
 	                </div>
 	                <h3 data-bind="visible: myRoutes().length > 0"><a>My routes</a></h3>
 	                <div style="max-height: 200px;">
