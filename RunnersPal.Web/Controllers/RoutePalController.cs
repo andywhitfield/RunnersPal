@@ -12,7 +12,7 @@ namespace RunnersPal.Web.Controllers
     {
         public ActionResult Index()
         {
-            if (Request.Params["save"] == "true")
+            if (Request.Params["route"] == "0" && ControllerContext.HasValidUserAccount())
             {
                 try
                 {
@@ -51,8 +51,16 @@ namespace RunnersPal.Web.Controllers
         [HttpPost]
         public ActionResult Load(long? id)
         {
-            if (!id.HasValue || id < 1)
+            if (!id.HasValue)
                 return new JsonResult { Data = new { Completed = false, Reason = "No route was provided." } };
+            if (id == 0)
+            {
+                var routeData = Session["rp_RouteInfoPreLogin"] as RouteData;
+                if (routeData != null)
+                    return new JsonResult { Data = new { Completed = true, Route = new { Id = routeData.Id, Name = routeData.Name, Notes = routeData.Notes ?? "", Public = routeData.Public ?? false, Points = routeData.Points ?? "[]", Distance = routeData.Distance, PublicOther = false, Deleted = false } } };
+                else
+                    return new JsonResult { Data = new { Completed = false, Reason = "No route was provided." } };
+            }
 
             var route = MassiveDB.Current.FindRoute(id.Value, true);
             if (route == null)

@@ -46,7 +46,7 @@ namespace RunnersPal.Web.Controllers
                         {
                             var openId = string.Format(CultureInfo.InvariantCulture, "http://twitter.com/{0}#{1}", name, id);
                             
-                            Trace.TraceInformation("Completed openid auth: " + openId);
+                            Trace.TraceInformation("Completed twitter auth...token: " + openId);
 
                             var userAccount = MassiveDB.Current.FindUser(openId);
                             if (userAccount == null)
@@ -63,27 +63,18 @@ namespace RunnersPal.Web.Controllers
                                 return RedirectToAction("FirstTime", "User");
                             }
 
-                            var returnPage = Session["login_returnPage"] as string;
-                            if (string.IsNullOrWhiteSpace(returnPage))
-                                return RedirectToAction("Index", "Home");
-                            return Redirect(returnPage);
+                            return RedirectToReturnPage();
                         }
                     }
                 }
+
+                SaveReturnPageToSession();
 
                 // login requested - redirect to openid or openauth provider
                 var loginUri = Request.Form["openid_identifier"];
 
                 if (loginUri == "https://twitter.com/")
                 {
-                    var returnPage = Request.Form["return_page"];
-                    if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
-                    Uri returnPageUri;
-                    Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
-                    if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
-                        returnPage = Url.Content("~/");
-
-                    Session["login_returnPage"] = returnPage;
                     Session["login_service"] = "twitter";
                     return TwitterLogin.StartSignInWithTwitter(false).AsActionResult();
                 }
@@ -94,28 +85,18 @@ namespace RunnersPal.Web.Controllers
                     {
                         try
                         {
-                            var returnPage = Request.Form["return_page"];
-                            if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
-                            Uri returnPageUri;
-                            Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
-                            if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
-                                returnPage = Url.Content("~/");
-
-                            Session["login_returnPage"] = returnPage;
                             return openid.CreateRequest(Request.Form["openid_identifier"]).RedirectingResponse.AsActionResult();
                         }
                         catch (ProtocolException ex)
                         {
-                            Trace.TraceError("Error sending to openid: " + ex);
-                            ViewData["Message"] = ex.Message;
-                            return View("Index");
+                            Trace.TraceWarning("Cannot send request to OpenID provider: ", ex);
+                            return RedirectToReturnPage("Could not send the login request to the OpenID provider. Check the service is available and try again. The error message is: " + ex.Message);
                         }
                     }
                     else
                     {
                         Trace.TraceWarning("Invalid openid identifier!");
-                        ViewData["Message"] = "Invalid identifier";
-                        return View("Index");
+                        return RedirectToReturnPage("Could not login using provided OpenID identifier. Please check the URL provided and try again.");
                     }
                 }
             }
@@ -139,18 +120,13 @@ namespace RunnersPal.Web.Controllers
                         if (userAccount.UserType == "N")
                             return RedirectToAction("FirstTime", "User");
 
-                        var returnPage = Session["login_returnPage"] as string;
-                        if (string.IsNullOrWhiteSpace(returnPage))
-                            return RedirectToAction("Index", "Home");
-                        return Redirect(returnPage);
+                        return RedirectToReturnPage();
                     case AuthenticationStatus.Canceled:
                         Trace.TraceInformation("Canceled openid auth");
-                        ViewData["Message"] = "Canceled at provider";
-                        return View("Index");
+                        return RedirectToReturnPage("The login process was cancelled. Please try logging in again.");
                     case AuthenticationStatus.Failed:
                         Trace.TraceError("Failed authenticating openid: " + response.Exception);
-                        ViewData["Message"] = response.Exception.Message;
-                        return View("Index");
+                        return RedirectToReturnPage("A failure occurred trying to login. This may be a temporary problem, so please try again. The error message is: " + (response.Exception == null ? "Unknown error." : response.Exception.Message));
                 }
             }
             return new EmptyResult();
@@ -174,6 +150,26 @@ namespace RunnersPal.Web.Controllers
             }
 
             return new JsonResult { Data = new { Completed = true } };
+        }
+
+        private void SaveReturnPageToSession()
+        {
+            var returnPage = Request.Form["return_page"];
+            if (string.IsNullOrWhiteSpace(returnPage)) returnPage = Url.Content("~/");
+            Uri returnPageUri;
+            Uri.TryCreate(returnPage, UriKind.RelativeOrAbsolute, out returnPageUri);
+            if (returnPageUri == null || returnPageUri.IsAbsoluteUri)
+                returnPage = Url.Content("~/");
+            Session["login_returnPage"] = returnPage;
+        }
+
+        private ActionResult RedirectToReturnPage(string errorMessage = null)
+        {
+            Session["login_errorMessage"] = errorMessage;
+            var returnPage = Session["login_returnPage"] as string;
+            if (string.IsNullOrWhiteSpace(returnPage))
+                return RedirectToAction("Index", "Home");
+            return Redirect(returnPage);
         }
     }
 }

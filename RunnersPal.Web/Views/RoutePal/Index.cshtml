@@ -267,7 +267,7 @@
                                     return;
                                 }
                                 loginAccountModel.showLoginDialog();
-                                loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?save=true';
+                                loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?route=0';
                                 loginPromptDialog.unbind('dialogclose');
                             });
                     });
@@ -350,6 +350,9 @@
                     }
                 // not one of my routes, perhaps it's a public route, so load it up:
                 new MyRouteModel(routeModel, routeId, '', 0, '', '', '').loadRoute();
+
+                if (routeId == 0 && loginAccountModel.loginError)
+                    loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?route=0';
             }
         });
 

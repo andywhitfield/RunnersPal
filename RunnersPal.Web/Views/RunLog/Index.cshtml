@@ -362,8 +362,12 @@
 
         var hashItem = window.location.hash;
         if (hashItem.indexOf("#addEvent=") == 0) {
-            var eventDate = new Date(hashItem.substring(10));
-            calendar.fullCalendar('select', eventDate, eventDate, 1);
+            if (!loginAccountModel.loginError) {
+                var eventDate = new Date(hashItem.substring(10));
+                calendar.fullCalendar('select', eventDate, eventDate, 1);
+            } else {
+                loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))'+hashItem;
+            }
         }
 
         if (typeof (Microsoft) != "undefined") {
