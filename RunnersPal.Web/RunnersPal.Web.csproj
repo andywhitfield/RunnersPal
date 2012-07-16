@@ -287,9 +287,6 @@
     <Content Include="Views\RoutePal\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Views\TrainingPal\Index.cshtml" />
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Views\Calculators\Pace.cshtml" />
   </ItemGroup>
   <ItemGroup>

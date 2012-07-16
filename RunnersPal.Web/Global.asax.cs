@@ -43,8 +43,9 @@ namespace RunnersPal.Web
             RegisterRoutes(RouteTable.Routes);
             RegisterModelBinders();
 
-            TwitterLogin.ConsumerKey = ConfigurationManager.AppSettings["TwitterConsumerKey"];
-            TwitterLogin.ConsumerSecret = ConfigurationManager.AppSettings["TwitterConsumerSecret"];
+            var twitterLoginSettings = MassiveDB.Current.FindSettings("TwitterLogin");
+            TwitterLogin.ConsumerKey = twitterLoginSettings.Single(s => s.Identifier == "TwitterConsumerKey").SettingValue;
+            TwitterLogin.ConsumerSecret = twitterLoginSettings.Single(s => s.Identifier == "TwitterConsumerSecret").SettingValue;
         }
 
         protected void Session_Start()

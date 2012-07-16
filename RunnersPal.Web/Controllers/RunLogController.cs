@@ -1,9 +1,9 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Web.Mvc;
 using RunnersPal.Web.Extensions;
 using RunnersPal.Web.Models;
-using System;
 
 namespace RunnersPal.Web.Controllers
 {

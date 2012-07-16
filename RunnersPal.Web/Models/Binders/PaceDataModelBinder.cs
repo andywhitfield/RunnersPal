@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using RunnersPal.Calculators;
 using RunnersPal.Web.Extensions;
 

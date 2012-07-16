@@ -1,10 +1,10 @@
-﻿using System.Web.Mvc;
-using RunnersPal.Web.Models;
-using RunnersPal.Web.Extensions;
-using System.Diagnostics;
-using System;
-using System.Linq;
+﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Web.Mvc;
+using RunnersPal.Web.Extensions;
+using RunnersPal.Web.Models;
 
 namespace RunnersPal.Web.Controllers
 {

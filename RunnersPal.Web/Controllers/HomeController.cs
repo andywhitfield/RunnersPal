@@ -1,15 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
+using System.Globalization;
+using System.Web;
 using System.Web.Mvc;
 using DotNetOpenAuth.Messaging;
 using DotNetOpenAuth.OpenId;
 using DotNetOpenAuth.OpenId.RelyingParty;
-using System.Web;
 using RunnersPal.Web.Extensions;
 using RunnersPal.Web.Models.Auth;
-using System.Globalization;
-using System.Configuration;
 
 namespace RunnersPal.Web.Controllers
 {
@@ -48,15 +46,7 @@ namespace RunnersPal.Web.Controllers
                             
                             Trace.TraceInformation("Completed twitter auth...token: " + openId);
 
-                            var userAccount = MassiveDB.Current.FindUser(openId);
-                            if (userAccount == null)
-                                userAccount = MassiveDB.Current.CreateUser(openId, Request.UserHostAddress, ControllerContext.UserDistanceUnits());
-
-                            HttpContext.Session["rp_UserAccount"] = userAccount;
-                            var cookie = new HttpCookie("rp_UserAccount", Secure.EncryptValue(userAccount.Id.ToString()));
-                            cookie.Expires = DateTime.UtcNow.AddYears(1);
-                            HttpContext.Response.AppendCookie(cookie);
-
+                            var userAccount = UserLoggingIn(openId);
                             if (userAccount.UserType == "N")
                             {
                                 Session["login_friendlyname"] = name;
@@ -108,15 +98,7 @@ namespace RunnersPal.Web.Controllers
                     case AuthenticationStatus.Authenticated:
                         Trace.TraceInformation("Completed openid auth: " + response.FriendlyIdentifierForDisplay);
 
-                        var userAccount = MassiveDB.Current.FindUser(response.ClaimedIdentifier.ToString());
-                        if (userAccount == null)
-                            userAccount = MassiveDB.Current.CreateUser(response.ClaimedIdentifier.ToString(), Request.UserHostAddress, ControllerContext.UserDistanceUnits());
-
-                        HttpContext.Session["rp_UserAccount"] = userAccount;
-                        var cookie = new HttpCookie("rp_UserAccount", Secure.EncryptValue(userAccount.Id.ToString()));
-                        cookie.Expires = DateTime.UtcNow.AddYears(1);
-                        HttpContext.Response.AppendCookie(cookie);
-
+                        var userAccount = UserLoggingIn(response.ClaimedIdentifier.ToString());
                         if (userAccount.UserType == "N")
                             return RedirectToAction("FirstTime", "User");
 
@@ -150,6 +132,19 @@ namespace RunnersPal.Web.Controllers
             }
 
             return new JsonResult { Data = new { Completed = true } };
+        }
+
+        private dynamic UserLoggingIn(string openId)
+        {
+            var userAccount = MassiveDB.Current.FindUser(openId);
+            if (userAccount == null)
+                userAccount = MassiveDB.Current.CreateUser(openId, Request.UserHostAddress, ControllerContext.UserDistanceUnits());
+
+            HttpContext.Session["rp_UserAccount"] = userAccount;
+            var cookie = new HttpCookie("rp_UserAccount", Secure.EncryptValue(userAccount.Id.ToString()));
+            cookie.Expires = DateTime.UtcNow.AddYears(1);
+            HttpContext.Response.AppendCookie(cookie);
+            return userAccount;
         }
 
         private void SaveReturnPageToSession()

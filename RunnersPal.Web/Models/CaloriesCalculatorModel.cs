@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿using System.Web.Mvc;
 using RunnersPal.Calculators;
 using RunnersPal.Web.Extensions;
-using System.Web.Mvc;
 
 namespace RunnersPal.Web.Models
 {
