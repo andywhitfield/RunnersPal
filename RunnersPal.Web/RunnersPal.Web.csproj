@@ -254,8 +254,9 @@
     <Content Include="Scripts\knockout-2.1.0.debug.js" />
     <Content Include="Scripts\knockout-2.1.0.js" />
     <Content Include="Scripts\latlon.js" />
-    <Content Include="Scripts\maproute.js" />
+    <Content Include="Scripts\runnerspal-maproute.js" />
     <Content Include="Scripts\modernizr-2.5.3.js" />
+    <Content Include="Scripts\runnerspal-models.js" />
     <Content Include="unexpectederror.html" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">

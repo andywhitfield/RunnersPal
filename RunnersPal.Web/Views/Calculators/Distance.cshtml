@@ -1,28 +1,12 @@
-﻿@{ ViewBag.Title = "Distance Calculator"; ViewBag.SelectedTab = "Calculators"; }
+﻿@{ ViewBag.Title = "Distance Calculator"; ViewBag.SelectedTab = "Calculators";
+   ViewBag.Scripts = new[] { "~/Scripts/runnerspal-models.js" };
+}
 <script type="text/javascript">
-    var CalcModel = function () {
-        this.distanceM = ko.observable("");
-        this.distanceKm = ko.observable("");
-    };
-
     $(function () {
-        var model = new CalcModel();
+        var model = new DistanceCalcModel('@Url.Action("calcdistance", "calculators")');
+        $('#distanceM').keyup(function () { model.milesChanged(); }).focus();
+        $('#distanceKm').keyup(function () { model.kmChanged(); });
         ko.applyBindings(model);
-
-        $('#distanceM').keyup(function () {
-            $.post('@Url.Action("calcdistance", "calculators")', { distanceM: model.distanceM(), calc: 'kilometers' },
-                function (result) {
-                    model.distanceKm(result.DistanceKm == null ? "" : result.DistanceKm.toFixed(4));
-                }
-              );
-        }).focus();
-        $('#distanceKm').keyup(function () {
-            $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: model.distanceKm(), calc: 'miles' },
-                function (result) {
-                    model.distanceM(result.DistanceM == null ? "" : result.DistanceM.toFixed(4));
-                }
-              );
-        });
     });
 </script>
 
