@@ -245,3 +245,12 @@ MapRoute.prototype.points = function () {
 MapRoute.prototype.pointCount = function () {
     return this._points.length;
 }
+
+/**
+* Set the Map view to centre on the specified location and at the given zoom level.
+* @param {Microsoft.Maps.Location} location: The location of the point to centre on.
+* @param {int} zoom: The zoom level - 19: the most detailed; 1: 'furthest out'.
+*/
+MapRoute.prototype.setView = function (location, zoom) {
+    this._map.setView({ zoom: zoom, center: location });
+}

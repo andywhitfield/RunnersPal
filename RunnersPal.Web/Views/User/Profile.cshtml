@@ -66,9 +66,9 @@
 	<div class="grid-row">
 		<div class="grid-cell grid-cell-20">Weight:</div>
 		<div class="grid-cell-last grid-cell-80">
-            <span data-bind="visible: weightUnits() == 'kg'"><input type="text" data-bind="value: weightKg, valueUpdate: 'afterkeydown'" name="weightKg" /> kg</span>
-            <span data-bind="visible: weightUnits() == 'lbs'"><input type="text" data-bind="value: weightLbs, valueUpdate: 'afterkeydown'" name="weightLbs" /> lbs</span>
-            <span data-bind="visible: weightUnits() == 'st'"><input type="text" data-bind="value: weightSt, valueUpdate: 'afterkeydown'" name="weightSt" class="short" /> st <input type="text" data-bind="value: weightStLbs, valueUpdate: 'afterkeydown'" name="weightStLbs" class="short" /> lbs</span>
+            <span data-bind="visible: weightUnits() == 'kg'"><input type="number" data-bind="value: weightKg, valueUpdate: 'afterkeydown'" name="weightKg" /> kg</span>
+            <span data-bind="visible: weightUnits() == 'lbs'"><input type="number" data-bind="value: weightLbs, valueUpdate: 'afterkeydown'" name="weightLbs" /> lbs</span>
+            <span data-bind="visible: weightUnits() == 'st'"><input type="number" data-bind="value: weightSt, valueUpdate: 'afterkeydown'" name="weightSt" class="short" /> st <input type="number" data-bind="value: weightStLbs, valueUpdate: 'afterkeydown'" name="weightStLbs" class="short" /> lbs</span>
         </div>
 		<div class="grid-cell-end"></div>
 	</div>

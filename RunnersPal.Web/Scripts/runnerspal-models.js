@@ -73,3 +73,48 @@ DistanceCalcModel.prototype.kmChanged = function () {
         }
     );
 };
+
+function PaceCalcModel(url) {
+    this._url = url;
+    this.distance = ko.observable("");
+    this.distanceUnits = ko.observable("");
+    this.distanceUnitsSingular = ko.observable("");
+    this.time = ko.observable("");
+    this.pace = ko.observable("");
+}
+PaceCalcModel.prototype.calculate = function(field) {
+    var self = this;
+    $.post(self._url,
+               { distance: self.distance(), time: self.time(), pace: self.pace(), calc: field },
+               function (result) {
+                   self.distance(result.Distance == null ? "" : result.Distance.BaseDistance.toFixed(4));
+                   self.time(result.Time == null ? "" : result.Time);
+                   self.pace(result.Pace == null ? "" : result.Pace);
+               });
+};
+PaceCalcModel.prototype.distanceHalfMarathon = function () {
+    this.distance(this.distanceUnits() == 'miles' ? 13.109375 : 21.097494);
+}
+PaceCalcModel.prototype.distanceMarathon = function () {
+    this.distance(this.distanceUnits() == 'miles' ? 26.21875 : 42.194988);
+};
+PaceCalcModel.prototype.updateDistanceUnits = function (url, unitsModel, isMiles) {
+    var _self = this;
+    this.distanceUnits(unitsModel.currentUnitsName);
+    this.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
+    if (this.distance() != "") {
+        $.post(url, { distanceKm: _self.distance(), distanceM: _self.distance(), calc: unitsModel.currentUnitsName },
+            function (result) {
+                var newDistance = isMiles ? result.DistanceM : result.DistanceKm;
+                if (newDistance == null) return;
+                _self.distance(newDistance.toFixed(4));
+            }
+        );
+    }
+    if (this.pace() != "") {
+        $.post(_self._url, { pace: _self.pace(), calc: 'pace' + unitsModel.currentUnitsName + 'units' },
+                function (result) {
+                    if (result.Pace != null) _self.pace(result.Pace);
+                });
+    }
+};

@@ -553,7 +553,7 @@
 	                </div>
 	                <h3 id="enterManualDistance"><a>Enter a manual distance</a></h3>
 	                <div>
-                        <input type="text" data-bind="value: distance, valueUpdate: 'afterkeydown'" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span>
+                        <input type="number" data-bind="value: distance, valueUpdate: 'afterkeydown'" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span>
 	                </div>
                 </div>
             </div>
@@ -565,7 +565,7 @@
 			<div class="grid-cell-last grid-cell-80">
                 <div class="grid">
 		            <div class="grid-row">
-			            <div class="grid-cell grid-cell-40"><input type="text" data-bind="value: time, valueUpdate: 'afterkeydown'" id="add-run-time" title="Enter mm or mm:ss or hh:mm:ss" /></div>
+			            <div class="grid-cell grid-cell-40"><input type="time" data-bind="value: time, valueUpdate: 'afterkeydown'" id="add-run-time" title="Enter mm or mm:ss or hh:mm:ss" /></div>
 			            <div class="grid-cell grid-cell-20"><strong>Pace:</strong></div>
 			            <div class="grid-cell-last grid-cell-40"><span id="add-run-pace" data-bind="text: pace">0</span> min/<span data-bind="text: distanceUnitsSingular" class="distanceUnitsSingular">mile</span></div>
 			            <div class="grid-cell-end"></div>

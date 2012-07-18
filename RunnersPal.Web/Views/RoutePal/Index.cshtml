@@ -122,6 +122,8 @@
                     var mapPoints = $.parseJSON(json.Points);
                     for (var i = 0; i < mapPoints.length; i++)
                         this.addRoutePoint(mapPoints[i]);
+                    if (mapPoints.length > 0)
+                        this._route.setView(mapPoints[0], 14);
                 }
             }
             this.routeModified(false);
@@ -215,6 +217,7 @@
                 this.totalDistance = function() { return this.pointCount() * 2; };
                 this.distanceMarkerUnits = function(u) { return 1; };
                 this.points = function() { return this._points; };
+                this.setView = function() {};
             };
             $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
             $('#fakeMap').click(function() {
@@ -290,7 +293,7 @@
                                 }
                                 routeModel.refreshMyRoute(result.Route);
                             } else {
-                                routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance, result.Route.LastRun, result.Route.Notes, ''));
+                                routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance.toFixed(2), result.Route.LastRun, result.Route.Notes, ''));
                             }
                         }
                     );
