@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Web;
@@ -75,7 +76,10 @@ namespace RunnersPal.Web.Controllers
         {
             return ShowStats(new MyStatsModel { Period = MyStatsModel.StatsPeriod.Week }, (u, m) =>
             {
+                Trace.TraceInformation("Getting run log events by week");
                 IEnumerable<dynamic> runEvents = MassiveDB.Current.FindRunLogEvents(u, false);
+                runEvents = runEvents.ToList();
+                Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
                 var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
@@ -92,7 +96,8 @@ namespace RunnersPal.Web.Controllers
                         return new { WeekEnding = dt, Distance = weekGrouping == null ? 0 : weekGrouping.Sum(a => a.DistanceAndPace.Item1.BaseDistance), Pace = weekGrouping == null ? 0 : weekGrouping.Average(a => a.DistanceAndPace.Item2.PaceInSeconds.Value / 60) };
                     })
                     .TakeWhile(agg => agg.WeekEnding >= groupedByWeek.First().Key)
-                    .Reverse();
+                    .Reverse()
+                    .ToList();
 
                 m.DistanceStats = aggregated.Select(g => new StatValue { Category = g.WeekEnding.ToString("dd MMM"), Value = g.Distance });
                 m.PaceStats = aggregated.Select(g => new StatValue { Category = g.WeekEnding.ToString("dd MMM"), Value = g.Pace });
@@ -102,7 +107,10 @@ namespace RunnersPal.Web.Controllers
         {
             return ShowStats(new MyStatsModel { Period = MyStatsModel.StatsPeriod.Month }, (u, m) =>
             {
+                Trace.TraceInformation("Getting run log events by month");
                 IEnumerable<dynamic> runEvents = MassiveDB.Current.FindRunLogEvents(u, false);
+                runEvents = runEvents.ToList();
+                Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
                 var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
@@ -119,7 +127,8 @@ namespace RunnersPal.Web.Controllers
                         return new { Month = dt, Distance = monthGrouping == null ? 0 : monthGrouping.Sum(a => a.DistanceAndPace.Item1.BaseDistance), Pace = monthGrouping == null ? 0 : monthGrouping.Average(a => a.DistanceAndPace.Item2.PaceInSeconds.Value / 60) };
                     })
                     .TakeWhile(agg => agg.Month >= groupedByMonth.First().Key)
-                    .Reverse();
+                    .Reverse()
+                    .ToList();
 
                 m.DistanceStats = aggregated.Select(g => new StatValue { Category = g.Month.ToString("MMM"), Value = g.Distance });
                 m.PaceStats = aggregated.Select(g => new StatValue { Category = g.Month.ToString("MMM"), Value = g.Pace });
@@ -129,7 +138,10 @@ namespace RunnersPal.Web.Controllers
         {
             return ShowStats(new MyStatsModel { Period = MyStatsModel.StatsPeriod.Year }, (u, m) =>
             {
+                Trace.TraceInformation("Getting run log events by year");
                 IEnumerable<dynamic> runEvents = MassiveDB.Current.FindRunLogEvents(u, false);
+                runEvents = runEvents.ToList();
+                Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
                 var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
@@ -173,6 +185,9 @@ namespace RunnersPal.Web.Controllers
         {
             if (!ControllerContext.HasValidUserAccount()) return View("NotLoggedIn");
             loadEventsCallback(ControllerContext.UserAccount(), model);
+
+            Trace.TraceInformation("Completed stats, returning view");
+
             if (!model.DistanceStats.Any() || !model.PaceStats.Any()) return View("NoLoggedEvents");
             return View("Index", model);
         }

@@ -14,7 +14,6 @@
     }
     <script src="@Url.Content("~/Scripts/jquery-1.7.2.min.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/jquery-ui-1.8.19.min.js")" type="text/javascript"></script>
-    <script src="@Url.Content("~/Scripts/modernizr-2.5.3.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/knockout-2.1.0.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/runnerspal-models.js")" type="text/javascript"></script>
     @if (ViewBag.Scripts != null)
@@ -127,6 +126,7 @@
         </p>
     </footer>
 
+    @if (!ViewContext.HasValidUserAccount()) {
     <div id="loginHelpDialog" title="Login Help">        <p>        It only takes a few moments to login or create an account. If you've        <strong>previously created an account</strong> on runners:pal, simply click on        either Google, Twitter, Yahoo, or MyOpenID to re-enter your password.        </p>        <p>        For <strong>new users</strong>, use or create an account from one of        Google, Twitter, Yahoo, or MyOpenID. Once you've logged in you there, you        will be returned to runners:pal and we will simply ask for your name.        That's it.        </p>        <p>        <i>More</i>: We use <a href="http://openid.net/" target="_blank">OpenID</a> - which means        we don't know or store your username or password - you login        securely on the Google/Twitter/Yahoo/MyOpenID site. We don't have access        to your email address (i.e. we don't know your gmail address).        </p>        <p>        If you have an alternative OpenID, simple click the <i>Other</i> button        and then enter your custom OpenID URL.        </p>    </div>
 
     <div id="loginErrorDialog" title="Login Error">
@@ -139,6 +139,8 @@
         <p>
         @Session["login_errorMessage"]
         </p>
-    </div>@{ Session.Remove("login_errorMessage"); }
+    </div>
+    }
+    @{ Session.Remove("login_errorMessage"); }
 </body>
 </html>
