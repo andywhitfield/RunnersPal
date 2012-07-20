@@ -66,7 +66,15 @@ namespace RunnersPal.Web.Controllers
                 if (loginUri == "https://twitter.com/")
                 {
                     Session["login_service"] = "twitter";
-                    return TwitterLogin.StartSignInWithTwitter(false).AsActionResult();
+                    try
+                    {
+                        return TwitterLogin.StartSignInWithTwitter(false).AsActionResult();
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.TraceWarning("Cannot send request to twitter: ", ex);
+                        return RedirectToReturnPage("Could not send the login request to Twitter. The service may be temporarily unavailable so please try again. The error message is: " + ex.Message);
+                    }
                 }
                 else
                 {

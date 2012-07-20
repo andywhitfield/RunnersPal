@@ -381,7 +381,7 @@ input.loginLogoutSelection
   color: #FFF;
   cursor: pointer;
 }
-input[type='text'].loginLogoutSelection 
+input[type='text'].loginLogoutSelection, input[type='url'].loginLogoutSelection
 {
   background: #FFF;
   color: #000;

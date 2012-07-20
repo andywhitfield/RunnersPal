@@ -1,4 +1,195 @@
-﻿function CalorieCalcModel(calorieCalcUrl, weightCalcUrl) {
+﻿function LoginAccountModel(logoutUrl) {
+    this._initdElements = false;
+    this.loginSection = null;
+    this.loggedInSection = null;
+    this.logoutAccountDialog = null;
+    this.logoutSection = null;
+    this.loginError = false;
+    this.returnPage = '';
+    this.openId = '';
+    this.isLoggedIn = false;
+    this.loginCreateAccountDialog = null;
+    this.loginUsingOpenId = null;
+    this.logoutUrl = logoutUrl;
+};
+LoginAccountModel.prototype.initLoginDialog = function () {
+    var self = this;
+    this.initElements();
+    this.hideLoginDialog();
+    this.loginSection = $('.login');
+    this.loginSection.css('cursor', 'pointer');
+    this.loginSection.click(function () { self.showLoginDialog(); });
+
+    var customOpenIdUrl = $("#loginForm input[name='loginWithOpenId']");
+    $("#loginForm input[name='loginWithOpenIdGo']").click(function () {
+        self.openId = customOpenIdUrl.val();
+        self.login();
+    });
+    $('#loginForm').submit(function () {
+        if (self.openId == "") self.openId = customOpenIdUrl.val();
+        if (self.returnPage == "") self.returnPage = window.location.pathname;
+        var loginForm = $('#loginForm');
+        loginForm.find("input[name='openid_identifier']").val(self.openId);
+        loginForm.find("input[name='return_page']").val(self.returnPage);
+    });
+
+    if (this.isLoggedIn) this.loginSection.hide();
+    else this.loggedInSection.hide();
+};
+LoginAccountModel.prototype.login = function() {
+    var loginForm = $('#loginForm');
+    loginForm.find("input[name='openid_identifier']").val(this.openId);
+    loginForm.submit();
+};
+LoginAccountModel.prototype.initLogoutDialog = function () {
+    this.initElements();
+    this.logoutAccountDialog = $('#logoutAccount');
+    this.logoutSection = $('.logout');
+
+    this.hideLogoutDialog();
+
+    var self = this;
+    this.logoutSection.css('cursor', 'pointer');
+    this.logoutSection.click(function () { self.showLogoutDialog(); });
+
+    $('#confirmLogout').click(function () {
+        self.hideLogoutDialog();
+        self.logout();
+    });
+};
+LoginAccountModel.prototype.logout = function() {
+    var self = this;
+    $.post(self.logoutUrl, function(logoutData) {
+        self.isLoggedIn = false;
+        self.loggedInSection.hide();
+        self.loginSection.show();
+        window.location.reload();
+    });
+};
+LoginAccountModel.prototype.showLoginDialog = function() {
+    $(window).scrollTop(0);
+    var loginLogoutSection = $('.loginLogout');
+    loginLogoutSection.hide();
+
+    if (this.loginCreateAccountDialog == null) this.initElements();
+
+    this.loginUsingOpenId.hide();
+    this.loginCreateAccountDialog.show();
+    this.loginCreateAccountDialog.children().first().show();
+};
+LoginAccountModel.prototype.hideLoginDialog = function() {
+    if (this.loginCreateAccountDialog == null) this.initElements();
+    this.loginCreateAccountDialog.hide();
+    var loginLogoutSection = $('.loginLogout');
+    loginLogoutSection.show();
+};
+LoginAccountModel.prototype.showLogoutDialog = function() {
+    $(window).scrollTop(0);
+    this.logoutSection.hide();
+    this.logoutAccountDialog.show();
+};
+LoginAccountModel.prototype.hideLogoutDialog = function() {
+    this.logoutSection.show();
+    this.logoutAccountDialog.hide();
+};
+LoginAccountModel.prototype.initElements = function () {
+    if (this._initdElements) return;
+    this.loggedInSection = $('.loggedIn');
+    this.loginCreateAccountDialog = $('#loginCreateAccount');
+    this.loginUsingOpenId = this.loginCreateAccountDialog.find("#loginCustomOpenId");
+
+    var self = this;
+    this.loginCreateAccountDialog.find("input[name='loginOther']").click(function () {
+        self.loginUsingOpenId.show();
+        self.loginCreateAccountDialog.children().first().hide();
+    });
+    this.loginCreateAccountDialog.find("input[data-url]").click(function () {
+        self.openId = $(this).attr('data-url');
+        self.login();
+    });
+
+    $('.loginCancel').click(function () {
+        self.hideLoginDialog();
+        self.hideLogoutDialog();
+    });
+
+    var loginHelpDlg = $("#loginHelpDialog").dialog({
+        height: 350,
+        width: 450,
+        modal: true,
+        buttons: { OK: function () { $(this).dialog("close"); } },
+        autoOpen: false
+    });
+    $('.loginHelp').click(function () {
+        loginHelpDlg.dialog('open');
+    });
+
+    var loginErrorDialog = $('#loginErrorDialog').dialog({
+        height: 350,
+        width: 450,
+        modal: true,
+        buttons: { OK: function () { $(this).dialog("close"); self.showLoginDialog(); } },
+        autoOpen: false
+    });
+
+    if (this.loginError) {
+        loginErrorDialog.dialog('open');
+    }
+
+    this._initdElements = true;
+};
+LoginAccountModel.prototype.initDialogs = function () {
+    this.initLoginDialog();
+    this.initLogoutDialog();
+};
+
+function UnitsModel(onChangeUrl, unitsName, singularUnitsName, jqEl) {
+    this._changeUrl = onChangeUrl;
+    this._radioElements = jqEl;
+    this.callbacks = [];
+    this.currentUnitsName = unitsName;
+    this.currentSingularUnitsName = singularUnitsName;
+    this.milesId = 0;
+    this.milesName = '';
+    this.milesSingular = '';
+    this.kmId = 0;
+    this.kmName = '';
+    this.kmSingular = '';
+    this._radioElements.click(this.updateUnits);
+};
+UnitsModel.prototype.updateUnits = function() {
+    var newUnit = this._radioElements.filter("input:checked").val();
+    if (this.unitsNameFor(newUnit) == this.currentUnitsName) return;
+    var self = this;
+    $.post(self._changeUrl, { distanceUnit : newUnit }, function() {
+        self.currentUnitsName = self.unitsNameFor(newUnit);
+        self.currentSingularUnitsName = self.singularUnitsNameFor(newUnit);
+        jQuery.each(self.callbacks, function(i, c) { if (jQuery.isFunction(c)) c(newUnit); });
+    });
+};
+UnitsModel.prototype.change = function(callback) {
+    this.callbacks.push(callback);
+};
+UnitsModel.prototype.unitsNameFor = function(unitId) {
+    if (unitId == this.milesId)
+        return this.milesName;
+    if (unitId == this.kmId)
+        return this.kmName;
+    return '';
+};
+UnitsModel.prototype.singularUnitsNameFor = function(unitId) {
+    if (unitId == this.milesId)
+        return this.milesSingular;
+    if (unitId == this.kmId)
+        return this.kmSingular;
+    return '';
+};
+UnitsModel.prototype.toggle = function() {
+    this._radioElements.filter("input:not(:checked)").attr("checked", "checked");
+    this.updateUnits();
+};
+
+function CalorieCalcModel(calorieCalcUrl, weightCalcUrl) {
     var _self = this;
     this.distance = ko.observable("");
     this.distanceUnits = ko.observable("");
@@ -30,10 +221,9 @@
             });
     });
 };
-
 CalorieCalcModel.prototype.distanceHalfMarathon = function () {
     this.distance(this.distanceUnits() == 'miles' ? 13.109375 : 21.097494);
-}
+};
 CalorieCalcModel.prototype.distanceMarathon = function () {
     this.distance(this.distanceUnits() == 'miles' ? 26.21875 : 42.194988);
 };
@@ -81,7 +271,7 @@ function PaceCalcModel(url) {
     this.distanceUnitsSingular = ko.observable("");
     this.time = ko.observable("");
     this.pace = ko.observable("");
-}
+};
 PaceCalcModel.prototype.calculate = function(field) {
     var self = this;
     $.post(self._url,

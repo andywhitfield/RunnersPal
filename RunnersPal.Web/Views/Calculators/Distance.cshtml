@@ -1,6 +1,4 @@
-﻿@{ ViewBag.Title = "Distance Calculator"; ViewBag.SelectedTab = "Calculators";
-   ViewBag.Scripts = new[] { "~/Scripts/runnerspal-models.js" };
-}
+﻿@{ ViewBag.Title = "Distance Calculator"; ViewBag.SelectedTab = "Calculators"; }
 <script type="text/javascript">
     $(function () {
         var model = new DistanceCalcModel('@Url.Action("calcdistance", "calculators")');

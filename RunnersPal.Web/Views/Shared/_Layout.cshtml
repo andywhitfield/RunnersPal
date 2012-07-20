@@ -16,6 +16,7 @@
     <script src="@Url.Content("~/Scripts/jquery-ui-1.8.19.min.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/modernizr-2.5.3.js")" type="text/javascript"></script>
     <script src="@Url.Content("~/Scripts/knockout-2.1.0.js")" type="text/javascript"></script>
+    <script src="@Url.Content("~/Scripts/runnerspal-models.js")" type="text/javascript"></script>
     @if (ViewBag.Scripts != null)
     {
         foreach (var script in ViewBag.Scripts)
@@ -24,185 +25,24 @@
         }
     }
     <script type="text/javascript">
-        var LoginAccountModel = function() {
-            var self = this;
-            this._initdElements = false;
-            this.loginSection = null;
-            this.loggedInSection = null;
-            this.logoutAccountDialog = null;
-            this.logoutSection = null;
-            this.loginError = false;
-            this.returnPage = '';
-            this.openId = '';
-            this.initLoginDialog = function() {
-                this.initElements();
-                this.hideLoginDialog();
-                this.loginSection = $('.login');
-                this.loginSection.css('cursor', 'pointer');
-                this.loginSection.click(function () { self.showLoginDialog(); });
-
-                var customOpenIdUrl = $("#loginForm input[name='loginWithOpenId']");
-                $("#loginForm input[name='loginWithOpenIdGo']").click(function () {
-                    self.openId = customOpenIdUrl.val();
-                    self.login();
-                });
-                $('#loginForm').submit(function() {
-                    if (self.openId == "") self.openId = customOpenIdUrl.val();
-                    if (self.returnPage == "") self.returnPage = window.location.pathname;
-                    var loginForm = $('#loginForm');
-                    loginForm.find("input[name='openid_identifier']").val(self.openId);
-                    loginForm.find("input[name='return_page']").val(self.returnPage);
-                });
-
-                if (this.isLoggedIn) this.loginSection.hide();
-                else this.loggedInSection.hide();
-
-            };
-            this.login = function() {
-                var loginForm = $('#loginForm');
-                loginForm.find("input[name='openid_identifier']").val(self.openId);
-                loginForm.submit();
-            };
-            this.initLogoutDialog = function() {
-                this.initElements();
-                this.logoutAccountDialog = $('#logoutAccount');
-                this.logoutSection = $('.logout');
-
-                self.hideLogoutDialog();
-
-                this.logoutSection.css('cursor', 'pointer');
-                this.logoutSection.click(function () { self.showLogoutDialog(); });
-
-                $('#confirmLogout').click(function() {
-                    self.hideLogoutDialog();
-                    self.logout();
-                });
-            };
-            this.logout = function() {
-                $.post('@Url.Action("logout", "user")', function(logoutData) {
-                    self.isLoggedIn = false;
-                    self.loggedInSection.hide();
-                    self.loginSection.show();
-                    window.location.reload();
-                });
-            };
-            this.isLoggedIn = @if (ViewContext.HasValidUserAccount()) {<text>true</text>} else {<text>false</text>};
-            this.loginCreateAccountDialog = null;
-            this.loginUsingOpenId = null;
-            this.showLoginDialog = function() {
-                $(window).scrollTop(0);
-                var loginLogoutSection = $('.loginLogout');
-                loginLogoutSection.hide();
-
-                if (this.loginCreateAccountDialog == null) this.initElements();
-
-                this.loginUsingOpenId.hide();
-                this.loginCreateAccountDialog.show();
-                this.loginCreateAccountDialog.children().first().show();
-            };
-            this.hideLoginDialog = function() {
-                if (this.loginCreateAccountDialog == null) this.initElements();
-                this.loginCreateAccountDialog.hide();
-                var loginLogoutSection = $('.loginLogout');
-                loginLogoutSection.show();
-            };
-            this.showLogoutDialog = function() {
-                $(window).scrollTop(0);
-                this.logoutSection.hide();
-                this.logoutAccountDialog.show();
-            };
-            this.hideLogoutDialog = function() {
-                this.logoutSection.show();
-                this.logoutAccountDialog.hide();
-            };
-            this.initElements = function() {
-                if (this._initdElements) return;
-                this.loggedInSection = $('.loggedIn');
-                this.loginCreateAccountDialog = $('#loginCreateAccount');
-                this.loginUsingOpenId = this.loginCreateAccountDialog.find("#loginCustomOpenId");
-
-                this.loginCreateAccountDialog.find("input[name='loginOther']").click(function() {
-                    self.loginUsingOpenId.show();
-                    self.loginCreateAccountDialog.children().first().hide();
-                });
-                this.loginCreateAccountDialog.find("input[data-url]").click(function() {
-                    self.openId = $(this).attr('data-url');
-                    self.login();
-                });
-
-                $('.loginCancel').click(function() {
-                    self.hideLoginDialog();
-                    self.hideLogoutDialog();
-                });
-
-                var loginHelpDlg = $("#loginHelpDialog").dialog({			        height: 350,                    width: 450,			        modal: true,                    buttons: { OK: function() { $(this).dialog("close"); } },                    autoOpen: false		        });
-                $('.loginHelp').click(function() {
-                    loginHelpDlg.dialog('open');
-                });
-
-                var loginErrorDialog = $('#loginErrorDialog').dialog({
-			        height: 350,                    width: 450,			        modal: true,                    buttons: { OK: function() { $(this).dialog("close"); self.showLoginDialog(); } },                    autoOpen: false                });
-                @if (!string.IsNullOrWhiteSpace(Session["login_errorMessage"] as string)) {<text>
-                this.loginError = true;
-                loginErrorDialog.dialog('open');
-                </text>}
-
-                this._initdElements = true;
-            };
-        };
-        var loginAccountModel = new LoginAccountModel();
-
-        var UnitsModel = function() {
-            var self = this;
-            this._radioElements = null;
-            this.callbacks = [];
-            this.init = function(jqEl) {
-                self._radioElements = jqEl;
-                self._radioElements.click(self.updateUnits);
-            };
-            this.updateUnits = function() {
-                var newUnit = self._radioElements.filter("input:checked").val();
-                if (self.unitsNameFor(newUnit) == self.currentUnitsName) return;
-                $.post('@Url.Action("updatedistanceunits", "home")', { distanceUnit : newUnit }, function() {
-                    self.currentUnitsName = self.unitsNameFor(newUnit);
-                    self.currentSingularUnitsName = self.singularUnitsNameFor(newUnit);
-                    jQuery.each(self.callbacks, function(i, c) { if (jQuery.isFunction(c)) c(newUnit); });
-                });
-            };
-            this.change = function(callback) {
-                self.callbacks.push(callback);
-            };
-            this.currentUnitsName = '@ViewContext.UserDistanceUnits("a")';
-            this.unitsNameFor = function(unitId) {
-                if (unitId == @((int)RunnersPal.DistanceUnits.Miles))
-                    return '@(RunnersPal.DistanceUnits.Miles.UnitsToString("a"))';
-                if (unitId == @((int)RunnersPal.DistanceUnits.Kilometers))
-                    return '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a"))';
-                return '';
-            };
-            this.currentSingularUnitsName = '@ViewContext.UserDistanceUnits("a.s")';
-            this.singularUnitsNameFor = function(unitId) {
-                if (unitId == @((int)RunnersPal.DistanceUnits.Miles))
-                    return '@(RunnersPal.DistanceUnits.Miles.UnitsToString("a.s"))';
-                if (unitId == @((int)RunnersPal.DistanceUnits.Kilometers))
-                    return '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a.s"))';
-                return '';
-            };
-            this.toggle = function() {
-                self._radioElements.filter("input:not(:checked)").attr("checked", "checked");
-                self.updateUnits();
-            };
-        }
-        var unitsModel = new UnitsModel();
+        var loginAccountModel;
+        var unitsModel;
 
         $(function () {
-            loginAccountModel.initLoginDialog();
-            loginAccountModel.initLogoutDialog();
-            unitsModel.init($("input[name='unit-prefs']"));
-        });
-    </script>
+            loginAccountModel = new LoginAccountModel('@Url.Action("logout", "user")');
+            loginAccountModel.isLoggedIn = @if (ViewContext.HasValidUserAccount()) {<text>true</text>} else {<text>false</text>};
+            loginAccountModel.loginError = @if (!string.IsNullOrWhiteSpace(Session["login_errorMessage"] as string)) {<text>true</text>} else {<text>false</text>};
+            loginAccountModel.initDialogs();
 
-    <script type="text/javascript">
+            unitsModel = new UnitsModel('@Url.Action("updatedistanceunits", "home")', '@ViewContext.UserDistanceUnits("a")', '@ViewContext.UserDistanceUnits("a.s")', $("input[name='unit-prefs']"));
+            unitsModel.milesId = @((int)RunnersPal.DistanceUnits.Miles);
+            unitsModel.milesName = '@(RunnersPal.DistanceUnits.Miles.UnitsToString("a"))';
+            unitsModel.milesSingular = '@(RunnersPal.DistanceUnits.Miles.UnitsToString("a.s"))';
+            unitsModel.kmId = @((int)RunnersPal.DistanceUnits.Kilometers);
+            unitsModel.kmName = '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a"))';
+            unitsModel.kmSingular = '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a.s"))';
+        });
+
         var _gaq = _gaq || [];
         _gaq.push(['_setAccount', 'UA-9144652-4']);
         _gaq.push(['_setDomainName', 'runnerspal.co.uk']);
