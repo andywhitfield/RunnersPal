@@ -117,6 +117,7 @@
     </article>
 
     <footer>
+        <form>
         <p>
         Preferred units:
         <label accesskey="ui"><input type="radio" name="unit-prefs" value="0" @if(ViewContext.UserDistanceUnits() == RunnersPal.DistanceUnits.Miles) {<text> checked</text>}/>miles</label>
@@ -125,6 +126,7 @@
         <p>
         <a href="http://awhitfield.ltd.uk" target="_blank">&copy; A.Whitfield Ltd</a>
         </p>
+        </form>
     </footer>
 
     @if (!ViewContext.HasValidUserAccount()) {

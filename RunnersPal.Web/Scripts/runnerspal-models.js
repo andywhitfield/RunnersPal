@@ -144,49 +144,49 @@ LoginAccountModel.prototype.initDialogs = function () {
 };
 
 function UnitsModel(onChangeUrl, unitsName, singularUnitsName, jqEl) {
-    this._changeUrl = onChangeUrl;
-    this._radioElements = jqEl;
-    this.callbacks = [];
-    this.currentUnitsName = unitsName;
-    this.currentSingularUnitsName = singularUnitsName;
-    this.milesId = 0;
-    this.milesName = '';
-    this.milesSingular = '';
-    this.kmId = 0;
-    this.kmName = '';
-    this.kmSingular = '';
-    this._radioElements.click(this.updateUnits);
-};
-UnitsModel.prototype.updateUnits = function() {
-    var newUnit = this._radioElements.filter("input:checked").val();
-    if (this.unitsNameFor(newUnit) == this.currentUnitsName) return;
     var self = this;
-    $.post(self._changeUrl, { distanceUnit : newUnit }, function() {
-        self.currentUnitsName = self.unitsNameFor(newUnit);
-        self.currentSingularUnitsName = self.singularUnitsNameFor(newUnit);
-        jQuery.each(self.callbacks, function(i, c) { if (jQuery.isFunction(c)) c(newUnit); });
-    });
-};
-UnitsModel.prototype.change = function(callback) {
-    this.callbacks.push(callback);
-};
-UnitsModel.prototype.unitsNameFor = function(unitId) {
-    if (unitId == this.milesId)
-        return this.milesName;
-    if (unitId == this.kmId)
-        return this.kmName;
-    return '';
-};
-UnitsModel.prototype.singularUnitsNameFor = function(unitId) {
-    if (unitId == this.milesId)
-        return this.milesSingular;
-    if (unitId == this.kmId)
-        return this.kmSingular;
-    return '';
-};
-UnitsModel.prototype.toggle = function() {
-    this._radioElements.filter("input:not(:checked)").attr("checked", "checked");
-    this.updateUnits();
+    self._changeUrl = onChangeUrl;
+    self._radioElements = jqEl;
+    self.callbacks = [];
+    self.currentUnitsName = unitsName;
+    self.currentSingularUnitsName = singularUnitsName;
+    self.milesId = 0;
+    self.milesName = '';
+    self.milesSingular = '';
+    self.kmId = 0;
+    self.kmName = '';
+    self.kmSingular = '';
+    self.updateUnits = function () {
+        var newUnit = self._radioElements.filter("input:checked").val();
+        if (self.unitsNameFor(newUnit) == self.currentUnitsName) return;
+        $.post(self._changeUrl, { distanceUnit: newUnit }, function () {
+            self.currentUnitsName = self.unitsNameFor(newUnit);
+            self.currentSingularUnitsName = self.singularUnitsNameFor(newUnit);
+            jQuery.each(self.callbacks, function (i, c) { if (jQuery.isFunction(c)) c(newUnit); });
+        });
+    };
+    self._radioElements.click(self.updateUnits);
+    self.change = function (callback) {
+        self.callbacks.push(callback);
+    };
+    self.unitsNameFor = function (unitId) {
+        if (unitId == self.milesId)
+            return self.milesName;
+        if (unitId == self.kmId)
+            return self.kmName;
+        return '';
+    };
+    self.singularUnitsNameFor = function (unitId) {
+        if (unitId == self.milesId)
+            return self.milesSingular;
+        if (unitId == this.kmId)
+            return self.kmSingular;
+        return '';
+    };
+    self.toggle = function () {
+        self._radioElements.filter("input:not(:checked)").attr("checked", "checked");
+        self.updateUnits();
+    };
 };
 
 function CalorieCalcModel(calorieCalcUrl, weightCalcUrl) {
@@ -201,13 +201,15 @@ function CalorieCalcModel(calorieCalcUrl, weightCalcUrl) {
     this.weightStLbs = ko.observable(0);
     this.calories = ko.observable("0");
     this.priorWeightUnits = ko.observable("");
-    this.computedCalories = ko.computed(function() {
+    this.computedCalories = ko.computed(function () {
+        if (calorieCalcUrl == "") return;
         $.post(calorieCalcUrl,
             { distance: _self.distance(), kg: _self.weightKg(), lbs: _self.weightLbs(), st: _self.weightSt(), stLbs: _self.weightStLbs(), units: _self.weightUnits() },
             function (result) { if (result.Result) _self.calories(result.Calories); });
     }, _self).extend({ throttle: 200 });
 
     this.weightUnits.subscribe(function () {
+        if (weightCalcUrl == "") return;
         $.post(weightCalcUrl,
             { kg: _self.weightKg(), lbs: _self.weightLbs(), st: _self.weightSt(), stLbs: _self.weightStLbs(), units: _self.priorWeightUnits() },
             function (result) {

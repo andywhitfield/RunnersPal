@@ -17,13 +17,13 @@ Enter a distance into either the miles or kilometers box and the distance will c
 <div class="grid">
 	<div class="grid-row">
 		<div class="grid-cell grid-cell-20"><strong>Distance in miles:</strong></div>
-		<div class="grid-cell-last grid-cell-80"><input type="number" data-bind="value: distanceM, valueUpdate: 'afterkeydown'" id="distanceM" /> miles</div>
+		<div class="grid-cell-last grid-cell-80"><input type="number" min="0.0" step="any" data-bind="value: distanceM, valueUpdate: 'afterkeydown'" id="distanceM" /> miles</div>
 		<div class="grid-cell-end"></div>
 	</div>
 	<div class="grid-row">&nbsp;</div>
 	<div class="grid-row">
 		<div class="grid-cell grid-cell-20"><strong>Distance in kilometers:</strong></div>
-		<div class="grid-cell-last grid-cell-80"><input type="number" data-bind="value: distanceKm, valueUpdate: 'afterkeydown'" id="distanceKm" /> kilometers</div>
+		<div class="grid-cell-last grid-cell-80"><input type="number" min="0.0" step="any" data-bind="value: distanceKm, valueUpdate: 'afterkeydown'" id="distanceKm" /> kilometers</div>
 		<div class="grid-cell-end"></div>
 	</div>
 </div>
