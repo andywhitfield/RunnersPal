@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.IO.Compression;
 using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
-using RunnersPal.Web.Controllers;
-using RunnersPal.Web.Models.Binders;
-using RunnersPal.Web.Models;
 using RunnersPal.Calculators;
+using RunnersPal.Web.Models;
 using RunnersPal.Web.Models.Auth;
-using System.Configuration;
+using RunnersPal.Web.Models.Binders;
 
 namespace RunnersPal.Web
 {
@@ -57,6 +55,36 @@ namespace RunnersPal.Web
                 var cookie = new HttpCookie("rp_UserAccount", userCookie.Value);
                 cookie.Expires = DateTime.UtcNow.AddYears(1);
                 HttpContext.Current.Response.AppendCookie(cookie);
+            }
+        }
+
+        protected void Application_PreRequestHandlerExecute(object sender, EventArgs e)
+        {
+            var app = sender as HttpApplication;
+            if (app == null) return;
+
+            var acceptEncoding = app.Request.Headers["Accept-Encoding"];
+            if (acceptEncoding == null || acceptEncoding.Length == 0)
+                return;
+            acceptEncoding = acceptEncoding.ToLower();
+
+            var prevUncompressedStream = app.Response.Filter;
+
+            if (!(app.Context.CurrentHandler is IHttpHandler) ||
+                app.Request["HTTP_X_MICROSOFTAJAX"] != null)
+                return;
+
+            if (acceptEncoding.Contains("deflate") || acceptEncoding == "*")
+            {
+                // deflate
+                app.Response.Filter = new DeflateStream(prevUncompressedStream, CompressionMode.Compress);
+                app.Response.AppendHeader("Content-Encoding", "deflate");
+            }
+            else if (acceptEncoding.Contains("gzip"))
+            {
+                // gzip
+                app.Response.Filter = new GZipStream(prevUncompressedStream, CompressionMode.Compress);
+                app.Response.AppendHeader("Content-Encoding", "gzip");
             }
         }
     }
