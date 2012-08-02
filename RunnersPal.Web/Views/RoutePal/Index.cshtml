@@ -16,7 +16,7 @@
         self.routeName = ko.observable(name);
         self.routeNotes = ko.observable(notes);
         self.distance = ko.observable(distance);
-        self.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
+        self.distanceUnits = ko.observable(unitsModel.currentUnitsName);
         self.lastRunOn = ko.observable(lastRunOn);
         self.lastRunBy = ko.observable(lastRunBy);
 
