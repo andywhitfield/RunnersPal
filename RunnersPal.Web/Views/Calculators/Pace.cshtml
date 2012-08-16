@@ -28,7 +28,7 @@ it took you to run and click the 'Pace' button to calculate your average pace fo
 <div class="grid">
 	<div class="grid-row">
 		<div class="grid-cell grid-cell-20"><input type="button" class="recalculate submit" data-field="distance" value="Distance:" title="Click to calculate distance from the time and pace"/></div>
-		<div class="grid-cell-last grid-cell-80"><input type="number" min="0.0" step="any" data-bind="value: distance, valueUpdate: 'afterkeydown'" id="distance" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span> (<button class="toggleDistUnits">toggle</button>)<br /><button id="distanceHalfMarathon">half-marathon</button> <button id="distanceMarathon">marathon</button></div>
+		<div class="grid-cell-last grid-cell-80"><input type="number" min="0.0" step="any" data-bind="value: distance, valueUpdate: 'afterkeydown'" id="distance" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span> (<button class="toggleDistUnits" title="Toggle between miles and kilometers">toggle</button>)<br /><button id="distanceHalfMarathon">half-marathon</button> <button id="distanceMarathon">marathon</button></div>
 		<div class="grid-cell-end"></div>
 	</div>
 	<div class="grid-row">
@@ -38,7 +38,7 @@ it took you to run and click the 'Pace' button to calculate your average pace fo
 	</div>
 	<div class="grid-row">
 		<div class="grid-cell grid-cell-20"><input type="button" class="recalculate submit" data-field="pace" value="Pace:" title="Click to calculate pace from the distance and time"/></div>
-		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: pace, valueUpdate: 'afterkeydown'" title="Enter mm or mm:ss" id="pace" /> min/<span data-bind="text: distanceUnitsSingular" class="distanceUnitsSingular">mile</span> (<button class="toggleDistUnits">toggle</button>)<br /><small>mm[:ss]</small></div>
+		<div class="grid-cell-last grid-cell-80"><input type="text" data-bind="value: pace, valueUpdate: 'afterkeydown'" title="Enter mm or mm:ss" id="pace" /> min/<span data-bind="text: distanceUnitsSingular" class="distanceUnitsSingular">mile</span> (<button class="toggleDistUnits" title="Toggle between miles and kilometers">toggle</button>)<br /><small>mm[:ss]</small></div>
 		<div class="grid-cell-end"></div>
 	</div>
 </div>

@@ -3,362 +3,43 @@
     ViewBag.Title = "Run:Log";
     ViewBag.SelectedTab = "RunLog";
     ViewBag.Stylesheets = new[] { "~/Content/fullcalendar.css" };
-    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
+    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-routemapping.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
 }
 <script type="text/javascript">
     var newRunModel;
-    var beginEdit = false;
-
-    Date.prototype.yyyymmdd = function() { 
-        var yyyy = this.getFullYear().toString();
-        var mm = (this.getMonth()+1).toString();
-        var dd  = this.getDate().toString();
-        return yyyy + '-' + (mm[1]?mm:"0"+mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]);
-    };
-
-    var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
- 
-     function MyRouteModel(owner, id, name, distance, lastRunOn, notes) {
-        var self = this;
-        self._owner = owner;
-        self.routeId = ko.observable(id);
-        self.routeName = ko.observable(name);
-        self.routeNotes = ko.observable(notes);
-        self.distance = ko.observable(distance);
-        self.distanceUnits = ko.observable(unitsModel.currentUnitsName);
-        self.lastRunOn = ko.observable(lastRunOn);
-
-        self.showLastRun = ko.computed(function() { return self.lastRunOn() != null && self.lastRunOn() != ""; }, this);
-        self.lastRunText = ko.computed(function() {
-            if (!self.showLastRun()) return "";
-            return "Last run on " + self.lastRunOn() + ".";
-        }, this);
-
-        self.chooseRoute = function() {
-            // make this the selection
-            self._owner.route(self.routeId());
-            self._owner.distance(self.routeName() + ", " + self.distance() + " " + self.distanceUnits());
-            $('#add-run-time').focus().select();
-        };
-    }
-
-    function RouteMapping(model) {
-        var self = this;
-        self._route = null;
-        self._model = model;
-        self.routeName = ko.observable("");
-        self.routeNotes = ko.observable("");
-        self.routePublic = ko.observable(false);
-        self.routeModified = ko.observable(false);
-        self.routePointCount = ko.observable(0);
-        self.distance = ko.observable(0.00);
-        self.distanceDisplay = ko.computed(function() { return self.distance() == 0 ? "0" : self.distance().toFixed(4); }, self);
-        self.distanceUnits = ko.observable(unitsModel.currentUnitsName);
-        self.allowUndo = ko.computed(function() { return self.distanceDisplay() != "0" || (self.routePointCount() > 0); }, self);
-
-        self.addRoutePoint = function(p) {
-            if (self._route == null) return;
-            self._route.addPoint(p);
-            self.routePointCount(self._route.pointCount());
-            self.routeModified(true);
-            self.distance(self._route.totalDistance() * kmUnitMultiplier());
-        };
-        self.undoLastPoint = function() {
-            if (self._route == null) return;
-            self._route.undo();
-            self.routePointCount(self._route.pointCount());
-            self.routeModified(true);
-            self.distance(self._route.totalDistance() * kmUnitMultiplier());
-        };
-        self.pointsToJson = function() {
-            if (self._route == null) return "[]";
-            return self._route.toJson();
-        }
-
-        self.reset = function() {
-            self.routeName('');
-            self.routeNotes('');
-            self.routePublic(false);
-
-            self.distance(0.00);
-
-            if (self._route != null) {
-                self._route.clear();
-                self.routePointCount(self._route.pointCount());
-            }
-            self.routeModified(false);
-        };
-        self.updateParent = function(model, distance, routeName) {
-            if (typeof(model) == "undefined")
-                model = self._model;
-            if (typeof(distance) == "undefined")
-                distance = self.distance();
-            if (typeof(routeName) == "undefined")
-                routeName = self.routeName();
-
-            if (model == null) return;
-
-            if (distance > 0 && routeName != "") {
-                model.distance(distance.toFixed(4));
-                model.route(-2);
-            } else {
-                model.route(0);
-            }
-            model.routeType('');
-        }
-        self.routeChange = ko.computed(function() {
-            self.updateParent(self._model, self.distance(), self.routeName());
-        });
-        self.redrawRoute = function() {
-	        self.distance(0.00);
-	        if (self._route != null) {
-	            var points = self._route.points();
-	            self._route.distanceMarkerUnits(1 / kmUnitMultiplier());
-	            self._route.clear();
-	            for (var i = 0; i < points.length; i++)
-	                self.addRoutePoint(points[i].toMapsLocation());
-	        }
-        };
-    }
 
     $(function () {
-        var AddRunModel = function () {
-            var self = this;
-            this.runLogId = ko.observable(-1);
-            this.eventDate = ko.observable();
-            this.runDate = ko.computed(function () { return self.eventDate() ? self.eventDate().toLocaleDateString() : ""; });
-            this.route = ko.observable(0);
-            this.routeType = ko.observable("");
-            this.distance = ko.observable("0");
-            this.distanceDescription = ko.computed(function () {
-                if (this.route() < 0)
-                    return this.distance() + " " + (this.distance() != 1 ? this.distanceUnits() : this.distanceUnitsSingular());
-                if (this.route() > 0)
-                    return this.distance();
-                return "Nothing selected - please choose a distance from below";
-            }, this);
-            this.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
-            this.distanceUnitsSingular = ko.observable("@ViewContext.UserDistanceUnits("a.s")");
-            this.time = ko.observable("");
-            this.pace = ko.observable("0");
-            this.paceCalc = ko.computed(function () {
-                $.post('@Url.Action("calcpace", "calculators")', { route: this.route(), distance: this.distance(), time: this.time(), calc: 'pace' },
-                function (result) {
-                    self.pace(result.Pace);
-                }
-              );
-            }, this).extend({ throttle: 200 });
-            this.calories = ko.observable("0");
-            this.caloriesCalc = ko.computed(function () {
-                if (!this.eventDate()) return;
-                $.post('@Url.Action("autocalccalories", "calculators")', { date: this.eventDate().toUTCString(), route: this.route(), distance: this.distance() },
-                function (result) {
-                    if (!result.Result) return;
-                    self.calories(result.Calories);
-                }
-              );
-            }, this).extend({ throttle: 200 });
-            this.comment = ko.observable("");
-            this.showAdd = ko.observable(true);
-            this.showEdit = ko.observable(false);
-            this.showDelete = ko.observable(false);
-            this.showViewRoute = ko.computed(function() { return this.route() > 0 && this.routeType() != 'common'; }, this);
-            this.myRoutes = ko.observableArray([]);
-            this.foundRoutes = ko.observableArray([]);
-            this.foundRouteText = ko.observable("");
-            this.applyOpenRouteBtn = function() { $('.openRoute').button({ icons: { primary: "ui-icon-document" }, text: false }); };
-            this.mapping = new RouteMapping(this);
+        AddRunModel.urls = {
+            calcPace: '@Url.Action("calcpace", "calculators")',
+            autoCalcCalories: '@Url.Action("autocalccalories", "calculators")',
+            calcDist: '@Url.Action("calcdistance", "calculators")',
+            myRoutes: '@Url.Action("myroutes", "routepal")',
+            runLog: '@(Url.Action("index", "runlog"))#addEvent=',
+            viewRunLog: '@Url.Action("view", "runlog")',
+            runLogEvents: '@Url.Action("allevents", "runlog")',
+            addRun: '@Url.Action("add", "runlog")',
+            updateRun: '@Url.Action("edit", "runlog")',
+            deleteRun: '@Url.Action("delete", "runlog")'
         };
 
-        var addRunDialog = $('#addRunDialog');
-        addRunDialog.hide();
-
-        var loginPromptDialog = $("#loginPromptDialog").dialog({
-			height: 280,
-            width: 400,
-			modal: true,
-            buttons: { OK: function() { $(this).dialog("close"); } },
-            autoOpen: false
-		});
-
-        var calendar = $('#calendar').fullCalendar({
-            header: {
-                left: 'today',
-                center: 'title',
-                right: 'prev,next'
-            },
-            firstDay: 1,
-            selectable: true,
-            selectHelper: false,
-            select: function (start, end, allDay) {
-                if (!loginAccountModel.isLoggedIn) {
-                    loginPromptDialog.dialog('open');
-                    loginPromptDialog.bind('dialogclose', function() {
-                        loginAccountModel.showLoginDialog();
-                        loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))#addEvent='+start.yyyymmdd();
-                        loginPromptDialog.unbind('dialogclose');
-                    });
-                } else {
-                    newRunModel.runLogId(-1);
-                    newRunModel.eventDate(start);
-                    newRunModel.distance("0");
-                    newRunModel.pace("0");
-                    newRunModel.time("");
-                    newRunModel.route(0);
-                    newRunModel.routeType("");
-                    newRunModel.comment("");
-                    newRunModel.calories("0");
-                    newRunModel.showAdd(true);
-                    newRunModel.showEdit(false);
-                    newRunModel.showDelete(false);
-                    $(window).scrollTop(0);
-                    addRunDialog.slideDown(function() { $("#distanceSelection").accordion('option', 'active', 0); });
-                }
-                calendar.fullCalendar('unselect');
-            },
-            eventClick: function (evt) {
-                $.post('@Url.Action("view", "runlog")', { runlogid: evt.id },
-                    function (result) {
-                        if (!result.Completed) {
-                            alert('Could not open event.\n\n' + result.Reason);
-                            return;
-                        }
-
-                        addRunDialog.slideDown(function() {
-                            var currentAccordionTab = $("#distanceSelection").accordion('option', 'active');
-                            var newAccordionTab = result.routeType == 'common' ? 0 : (result.route == -1 ? 4 : 1);
-                            if (currentAccordionTab != newAccordionTab) {
-                                beginEdit = true;
-                                $("#distanceSelection").accordion('option', 'active', newAccordionTab);
-                            }
-                            $(window).scrollTop(0);
-                        });
-                        newRunModel.runLogId(result.id);
-                        newRunModel.eventDate(new Date(result.date));
-                        newRunModel.distance(result.distance);
-                        newRunModel.pace(result.pace);
-                        newRunModel.time(result.time);
-                        newRunModel.route(result.route);
-                        newRunModel.routeType(result.routeType);
-                        newRunModel.comment(result.comment);
-                        newRunModel.showAdd(false);
-                        newRunModel.showEdit(true);
-                        newRunModel.showDelete(true);
-                    });
-            },
-            editable: false,
-            events: '@Url.Action("allevents", "runlog")'
-        });
-
-        $('#add-run-submit-button').click(function () {
-            var eventDate = newRunModel.eventDate();
-            var routeId = newRunModel.route();
-            $.post('@Url.Action("add", "runlog")', { date: eventDate.toUTCString(), distance: newRunModel.distance(),
-                    route: routeId, time: newRunModel.time(), comment: newRunModel.comment(),
-                    newRouteName: newRunModel.mapping.routeName(), newRouteNotes: newRunModel.mapping.routeNotes(),
-                    newRoutePublic: newRunModel.mapping.routePublic(), newRoutePoints: newRunModel.mapping.pointsToJson() },
-                function (result) {
-                    if (!result.Completed) {
-                        alert('Could not add event.\n\n' + result.Reason);
-                        return;
-                    }
-
-                    addRunDialog.slideUp('fast');
-                    calendar.fullCalendar('refetchEvents');
-                    if (routeId < 0)
-                        fetchMyRoutes(newRunModel);
-                });
-        });
-        $('#update-run-submit-button').click(function () {
-            var eventDate = newRunModel.eventDate();
-            $.post('@Url.Action("edit", "runlog")', { runLogId: newRunModel.runLogId(), date: eventDate.toUTCString(), distance: newRunModel.distance(), route: newRunModel.route(), time: newRunModel.time(), comment: newRunModel.comment() },
-                function (result) {
-                    if (!result.Completed) {
-                        alert('Could not update this event\n\n' + result.Reason);
-                        return;
-                    }
-
-                    addRunDialog.slideUp('fast');
-                    calendar.fullCalendar('refetchEvents');
-                })
-        });
-        $('#delete-run-submit-button').click(function () {
-            var eventDate = newRunModel.eventDate();
-            $.post('@Url.Action("delete", "runlog")', { runLogId: newRunModel.runLogId() },
-                function (result) {
-                    if (!result.Completed) {
-                        alert('Could not delete this event.\n\n' + result.Reason);
-                        return;
-                    }
-
-                    addRunDialog.slideUp('fast');
-                    calendar.fullCalendar('refetchEvents');
-                })
-        });
-        $('#add-run-cancel-button').click(function () {
-            addRunDialog.slideUp('fast');
-        });
-
         newRunModel = new AddRunModel();
+        var addRunDialog = $('#addRunDialog').hide();
+        var loginPromptDialog = AddRunModel.createLoginPromptDialog('#loginPromptDialog');
+        var calendar = AddRunModel.createCalendar('#calendar', newRunModel, loginPromptDialog, addRunDialog);
+
+        $('#add-run-submit-button').click(function () { newRunModel.addRun(calendar, addRunDialog); });
+        $('#update-run-submit-button').click(function () { newRunModel.updateRun(calendar, addRunDialog); });
+        $('#delete-run-submit-button').click(function () { newRunModel.deleteRun(calendar, addRunDialog); });
+        $('#add-run-cancel-button').click(function () { addRunDialog.slideUp('fast'); });
+
+        newRunModel.createDistanceSelection($("#distanceSelection"), $('.distanceSelectionCommonRoutes > li > a'));
+
         ko.applyBindings(newRunModel);
 
         unitsModel.change(function (u) {
             calendar.fullCalendar('refetchEvents');
-            newRunModel.distanceUnits(unitsModel.currentUnitsName);
-            newRunModel.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
-
-            if (newRunModel.route() < 0)
-                $.post('@Url.Action("calcdistance", "calculators")', { distanceKm: newRunModel.distance(), distanceM: newRunModel.distance(), calc: unitsModel.currentUnitsName },
-                    function (result) {
-                        var newDistance = u == @((int)RunnersPal.DistanceUnits.Miles) ? result.DistanceM : result.DistanceKm;
-                        if (newDistance == null) return;
-                        newRunModel.distance(newDistance.toFixed(4));
-                    }
-                );
-
-            if (newRunModel.route() > 0)
-                newRunModel.distance(newRunModel.distance() + " ");
-            
-            fetchMyRoutes(newRunModel);
-            newRunModel.mapping.distanceUnits(unitsModel.currentUnitsName);
-            newRunModel.mapping.redrawRoute();
+            newRunModel.updateFromUnitsModel();
         });
-
-        $("#distanceSelection").accordion({
-            autoHeight: false,
-            navigation: true
-        }).bind('accordionchange', function (event, ui) {
-            if (beginEdit) {
-                beginEdit = false;
-                return;
-            }
-
-            // if enter manual distance, auto focus text box
-            if (ui.newHeader.attr('id') == "enterManualDistance") {
-                newRunModel.distance("0");
-                newRunModel.route(-1);
-                newRunModel.routeType("");
-                ui.newContent.find('input').focus().select();
-            } else if (ui.newHeader.attr('id') == "tabMapNewRoute") {
-                newRunModel.route(-2);
-                newRunModel.routeType("");
-                newRunModel.distance("0");
-                newRunModel.mapping.updateParent();
-            } else {
-                newRunModel.route(0);
-                newRunModel.routeType("");
-                if (ui.newHeader.attr('id') == "tabFindARoute")
-                    $('#q').focus().select();
-            }
-        });
-        $('.distanceSelectionCommonRoutes > li > a')
-            .text(function () { return $(this).attr('data-distancedesc'); })
-            .click(function () {
-                newRunModel.route($(this).attr('data-route'));
-                newRunModel.routeType("common");
-                newRunModel.distance($(this).attr('data-distancedesc'));
-                $('#add-run-time').focus().select();
-            });
 
         var hashItem = window.location.hash;
         if (hashItem.indexOf("#addEvent=") == 0) {
@@ -366,7 +47,7 @@
                 var eventDate = new Date(hashItem.substring(10));
                 calendar.fullCalendar('select', eventDate, eventDate, 1);
             } else {
-                loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))'+hashItem;
+                loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))' + hashItem;
             }
         }
 
@@ -378,12 +59,12 @@
             });
             map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
 
-            if (typeof(navigator) != "undefined" && typeof(navigator.geolocation) != "undefined" && typeof(navigator.geolocation.getCurrentPosition) == "function") {
+            if (typeof (navigator) != "undefined" && typeof (navigator.geolocation) != "undefined" && typeof (navigator.geolocation.getCurrentPosition) == "function") {
                 navigator.geolocation.getCurrentPosition(
-                  function(pos) {
-                    map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
+                  function (pos) {
+                      map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
                   },
-                  function() { }
+                  function () { }
                 );
             }
 
@@ -391,18 +72,18 @@
             theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
             newRunModel.mapping._route = theRoute;
         } else {
-            newRunModel.mapping._route = new function() {
+            newRunModel.mapping._route = new function () {
                 this._points = [];
-                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
-                this.clear = function() { this._points = []; };
-                this.addPoint = function(p) { this._points.push(p); };
-                this.pointCount = function() { return this._points.length; };
-                this.totalDistance = function() { return this.pointCount() * 2; };
-                this.distanceMarkerUnits = function(u) { return 1; };
-                this.points = function() { return this._points; };
+                this.toJson = function () { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
+                this.clear = function () { this._points = []; };
+                this.addPoint = function (p) { this._points.push(p); };
+                this.pointCount = function () { return this._points.length; };
+                this.totalDistance = function () { return this.pointCount() * 2; };
+                this.distanceMarkerUnits = function (u) { return 1; };
+                this.points = function () { return this._points; };
             };
             $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
-            $('#fakeMap').click(function() {
+            $('#fakeMap').click(function () {
                 newRunModel.mapping.routeModified(true);
                 newRunModel.mapping.distance(7.7);
             });
@@ -410,7 +91,7 @@
 
         $('#routeNew')
             .button({ icons: { primary: "ui-icon-newwin" }, text: false })
-            .click(function() {
+            .click(function () {
                 if (newRunModel.mapping.routeModified() || newRunModel.mapping.routePointCount() > 0) {
                     if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
                 }
@@ -419,11 +100,11 @@
 
         $('#routeUndo')
             .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
-            .click(function() {
+            .click(function () {
                 newRunModel.mapping.undoLastPoint();
             });
 
-        $('#findARoute').submit(function() {
+        $('#findARoute').submit(function () {
             var query = $('#q').val();
             $.post('@Url.Action("find", "routepal")', { q: query },
                 function (result) {
@@ -441,21 +122,11 @@
             return false;
         });
 
-        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s" } });
+        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s"} });
 
-        function fetchMyRoutes(model) {
-            $.post('@Url.Action("myroutes", "routepal")',
-                function (result) {
-                    if (!result.Completed) {
-                        return;
-                    }
-                    model.myRoutes.removeAll();
-                    for (var i = 0; i < result.Routes.length; i++)
-                        model.myRoutes.push(new MyRouteModel(model, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
-                }
-            );
-        }
-        fetchMyRoutes(newRunModel);
+        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
+
+        newRunModel.fetchMyRoutes();
     });
 </script>
 
@@ -538,7 +209,7 @@
 
                             <div>
                                 <strong>Distance:</strong>
-                                <span data-bind="text: mapping.distanceDisplay">0</span> <span data-bind="text: mapping.distanceUnits">miles</span>
+                                <span data-bind="text: mapping.distanceDisplay">0</span> <span data-bind="text: mapping.distanceUnits">miles</span> <button class="toggleDistUnits" title="Toggle between miles and kilometers">toggle</button>
                             </div>
 
                             <div><label for="route-notes"><strong>Route Notes:</strong></label></div>
@@ -553,7 +224,7 @@
 	                </div>
 	                <h3 id="enterManualDistance"><a>Enter a manual distance</a></h3>
 	                <div>
-                        <input type="number" min="0.0" step="any" data-bind="value: distance, valueUpdate: 'afterkeydown'" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span>
+                        <input type="number" min="0.0" step="any" data-bind="value: distance, valueUpdate: 'afterkeydown'" /> <span data-bind="text: distanceUnits" class="distanceUnits">miles</span> (<button class="toggleDistUnits" title="Toggle between miles and kilometers">toggle</button>)
 	                </div>
                 </div>
             </div>

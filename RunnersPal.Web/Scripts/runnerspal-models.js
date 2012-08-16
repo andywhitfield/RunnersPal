@@ -156,6 +156,8 @@ function UnitsModel(onChangeUrl, unitsName, singularUnitsName, jqEl) {
     self.kmId = 0;
     self.kmName = '';
     self.kmSingular = '';
+    self.isCurrentUnitsMiles = function () { return self.currentUnitsName == self.milesName; }
+    self.isCurrentUnitsKm = function () { return self.currentUnitsName == self.kmName; }
     self.updateUnits = function () {
         var newUnit = self._radioElements.filter("input:checked").val();
         if (self.unitsNameFor(newUnit) == self.currentUnitsName) return;
