@@ -278,6 +278,73 @@ AddRunModel.prototype.createDistanceSelection = function (accordianEl, commonRou
                 $('#add-run-time').focus().select();
             });
 }
+AddRunModel.prototype.startNew = function () {
+    if (this.mapping.routeModified() || this.mapping.routePointCount() > 0) {
+        if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
+    }
+    this.mapping.reset();
+}
+AddRunModel.prototype.undo = function () {
+    this.mapping.undoLastPoint();
+}
+AddRunModel.prototype.find = function (findEl) {
+    var self = this;
+    var query = $(findEl).val();
+    $.post(AddRunModel.urls.find, { q: query },
+                function (result) {
+                    if (!result.Completed) {
+                        self.foundRouteText('Could not search for routes: ' + result.Reason);
+                        return;
+                    }
+                    self.foundRoutes.removeAll();
+                    for (var i = 0; i < result.Routes.length; i++)
+                        self.foundRoutes.push(new MyRouteModel(self, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+                    if (self.foundRoutes().length == 0)
+                        self.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
+                }
+            );
+    return false;
+}
+AddRunModel.prototype.createMap = function (mapEl) {
+    var self = this;
+    if (typeof (Microsoft) != "undefined") {
+        var map = new Microsoft.Maps.Map(mapEl[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
+        Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
+            e.handled = true;
+            self.mapping.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
+        });
+        map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
+
+        if (typeof (navigator) != "undefined" && typeof (navigator.geolocation) != "undefined" && typeof (navigator.geolocation.getCurrentPosition) == "function") {
+            navigator.geolocation.getCurrentPosition(
+                  function (pos) {
+                      map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
+                  },
+                  function () { }
+                );
+        }
+
+        var theRoute = new MapRoute(map);
+        theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
+        self.mapping._route = theRoute;
+    } else {
+        self.mapping._route = new function () {
+            this._points = [];
+            this.toJson = function () { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
+            this.clear = function () { this._points = []; };
+            this.addPoint = function (p) { this._points.push(p); };
+            this.pointCount = function () { return this._points.length; };
+            this.totalDistance = function () { return this.pointCount() * 2; };
+            this.distanceMarkerUnits = function (u) { return 1; };
+            this.points = function () { return this._points; };
+        };
+        $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
+        $('#fakeMap').click(function () {
+            self.mapping.routeModified(true);
+            self.mapping.distance(7.7);
+        });
+    }
+}
 AddRunModel.createLoginPromptDialog = function (elementId) {
     return $(elementId).dialog({
         height: 280,
@@ -356,4 +423,15 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
         editable: false,
         events: AddRunModel.urls.runLogEvents
     });
+}
+AddRunModel.checkAddEvent = function (loginAccountModel, calendar) {
+    var hashItem = window.location.hash;
+    if (hashItem.indexOf("#addEvent=") == 0) {
+        if (!loginAccountModel.loginError) {
+            var eventDate = new Date(hashItem.substring(10));
+            calendar.fullCalendar('select', eventDate, eventDate, 1);
+        } else {
+            loginAccountModel.returnPage = AddRunModel.urls.runLogBase + hashItem;
+        }
+    }
 }

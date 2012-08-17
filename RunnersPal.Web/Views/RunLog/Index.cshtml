@@ -6,127 +6,44 @@
     ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-routemapping.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
 }
 <script type="text/javascript">
-    var newRunModel;
-
     $(function () {
         AddRunModel.urls = {
-            calcPace: '@Url.Action("calcpace", "calculators")',
-            autoCalcCalories: '@Url.Action("autocalccalories", "calculators")',
-            calcDist: '@Url.Action("calcdistance", "calculators")',
-            myRoutes: '@Url.Action("myroutes", "routepal")',
-            runLog: '@(Url.Action("index", "runlog"))#addEvent=',
-            viewRunLog: '@Url.Action("view", "runlog")',
-            runLogEvents: '@Url.Action("allevents", "runlog")',
-            addRun: '@Url.Action("add", "runlog")',
-            updateRun: '@Url.Action("edit", "runlog")',
-            deleteRun: '@Url.Action("delete", "runlog")'
+            calcPace: '@Url.Action("calcpace", "calculators")', autoCalcCalories: '@Url.Action("autocalccalories", "calculators")',
+            calcDist: '@Url.Action("calcdistance", "calculators")', myRoutes: '@Url.Action("myroutes", "routepal")',
+            runLogBase: '@(Url.Action("index", "runlog"))', runLog: '@(Url.Action("index", "runlog"))#addEvent=',
+            viewRunLog: '@Url.Action("view", "runlog")', runLogEvents: '@Url.Action("allevents", "runlog")',
+            addRun: '@Url.Action("add", "runlog")', updateRun: '@Url.Action("edit", "runlog")',
+            deleteRun: '@Url.Action("delete", "runlog")', find: '@Url.Action("find", "routepal")'
         };
 
-        newRunModel = new AddRunModel();
+        var newRunModel = new AddRunModel();
         var addRunDialog = $('#addRunDialog').hide();
         var loginPromptDialog = AddRunModel.createLoginPromptDialog('#loginPromptDialog');
         var calendar = AddRunModel.createCalendar('#calendar', newRunModel, loginPromptDialog, addRunDialog);
+
+        newRunModel.createDistanceSelection($("#distanceSelection"), $('.distanceSelectionCommonRoutes > li > a'));
+        newRunModel.createMap($('#mapDiv'));
+        newRunModel.fetchMyRoutes();
+
+        ko.applyBindings(newRunModel);
 
         $('#add-run-submit-button').click(function () { newRunModel.addRun(calendar, addRunDialog); });
         $('#update-run-submit-button').click(function () { newRunModel.updateRun(calendar, addRunDialog); });
         $('#delete-run-submit-button').click(function () { newRunModel.deleteRun(calendar, addRunDialog); });
         $('#add-run-cancel-button').click(function () { addRunDialog.slideUp('fast'); });
 
-        newRunModel.createDistanceSelection($("#distanceSelection"), $('.distanceSelectionCommonRoutes > li > a'));
+        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { newRunModel.startNew(); });
+        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { newRunModel.undo(); });
+        $('#findARoute').submit(function () { return newRunModel.find('#q'); });
+        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s"} });
+        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
 
-        ko.applyBindings(newRunModel);
+        AddRunModel.checkAddEvent(loginAccountModel, calendar);
 
         unitsModel.change(function (u) {
             calendar.fullCalendar('refetchEvents');
             newRunModel.updateFromUnitsModel();
         });
-
-        var hashItem = window.location.hash;
-        if (hashItem.indexOf("#addEvent=") == 0) {
-            if (!loginAccountModel.loginError) {
-                var eventDate = new Date(hashItem.substring(10));
-                calendar.fullCalendar('select', eventDate, eventDate, 1);
-            } else {
-                loginAccountModel.returnPage = '@(Url.Action("index", "runlog"))' + hashItem;
-            }
-        }
-
-        if (typeof (Microsoft) != "undefined") {
-            var map = new Microsoft.Maps.Map($('#mapDiv')[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
-            Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
-                e.handled = true;
-                newRunModel.mapping.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
-            });
-            map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
-
-            if (typeof (navigator) != "undefined" && typeof (navigator.geolocation) != "undefined" && typeof (navigator.geolocation.getCurrentPosition) == "function") {
-                navigator.geolocation.getCurrentPosition(
-                  function (pos) {
-                      map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
-                  },
-                  function () { }
-                );
-            }
-
-            var theRoute = new MapRoute(map);
-            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
-            newRunModel.mapping._route = theRoute;
-        } else {
-            newRunModel.mapping._route = new function () {
-                this._points = [];
-                this.toJson = function () { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
-                this.clear = function () { this._points = []; };
-                this.addPoint = function (p) { this._points.push(p); };
-                this.pointCount = function () { return this._points.length; };
-                this.totalDistance = function () { return this.pointCount() * 2; };
-                this.distanceMarkerUnits = function (u) { return 1; };
-                this.points = function () { return this._points; };
-            };
-            $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
-            $('#fakeMap').click(function () {
-                newRunModel.mapping.routeModified(true);
-                newRunModel.mapping.distance(7.7);
-            });
-        }
-
-        $('#routeNew')
-            .button({ icons: { primary: "ui-icon-newwin" }, text: false })
-            .click(function () {
-                if (newRunModel.mapping.routeModified() || newRunModel.mapping.routePointCount() > 0) {
-                    if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
-                }
-                newRunModel.mapping.reset();
-            });
-
-        $('#routeUndo')
-            .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
-            .click(function () {
-                newRunModel.mapping.undoLastPoint();
-            });
-
-        $('#findARoute').submit(function () {
-            var query = $('#q').val();
-            $.post('@Url.Action("find", "routepal")', { q: query },
-                function (result) {
-                    if (!result.Completed) {
-                        newRunModel.foundRouteText('Could not search for routes: ' + result.Reason);
-                        return;
-                    }
-                    newRunModel.foundRoutes.removeAll();
-                    for (var i = 0; i < result.Routes.length; i++)
-                        newRunModel.foundRoutes.push(new MyRouteModel(newRunModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
-                    if (newRunModel.foundRoutes().length == 0)
-                        newRunModel.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
-                }
-            );
-            return false;
-        });
-
-        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s"} });
-
-        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
-
-        newRunModel.fetchMyRoutes();
     });
 </script>
 
