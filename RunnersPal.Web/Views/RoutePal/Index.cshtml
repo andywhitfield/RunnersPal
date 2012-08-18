@@ -359,6 +359,7 @@
             }
         });
 
+        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
         unitsModel.change(function (u) {
             routeModel.distanceUnits(unitsModel.currentUnitsName);
             routeModel.redrawRoute();
@@ -443,7 +444,7 @@
 
             <div>
                 <strong>Distance:</strong>
-                <span data-bind="text: distanceDisplay">0</span> <span data-bind="text: distanceUnits">miles</span>
+                <span data-bind="text: distanceDisplay">0</span> <span data-bind="text: distanceUnits" class="toggleDistUnits" title="Toggle between miles and kilometers">miles</span>
             </div>
 
             <div><label for="route-notes"><strong>Route Notes:</strong></label></div>

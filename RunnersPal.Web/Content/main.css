@@ -410,3 +410,5 @@ input.loginMyOpenId { background-image: url(myopenid.ico.png); background-repeat
 input.loginOpenId { background-image: url(openid.ico.png); background-repeat: no-repeat; background-position: left; }
 
 .distanceMarker div { color: black !important; }
+span.toggleDistUnits { text-decoration: underline; cursor: pointer; }
+span.toggleDistUnits:hover { text-decoration: none; cursor: pointer; }
