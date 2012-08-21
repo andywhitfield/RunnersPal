@@ -496,6 +496,16 @@ function RouteDisplayModel() {
     this.foundRoutes = ko.observableArray([]);
     this.foundRouteText = ko.observable("");
 }
+RouteDisplayModel.getParameterByName = function(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regexS = "[\\?&]" + name + "=([^&#]*)";
+    var regex = new RegExp(regexS);
+    var results = regex.exec(window.location.search);
+    if (results == null)
+        return "";
+    else
+        return decodeURIComponent(results[1].replace(/\+/g, " "));
+}
 RouteDisplayModel.prototype.addRoutePoint = function(p) {
     if (this._route == null) return;
     this._route.addPoint(p);
@@ -615,4 +625,134 @@ RouteDisplayModel.prototype.createMap = function (mapDiv) {
             self.distance(7.7);
         });
     }
+}
+RouteDisplayModel.prototype.newRoute = function () {
+    if (this.allowSave() || this.routePointCount() > 0) {
+        if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
+    }
+    this.reset();
+}
+RouteDisplayModel.prototype.resetRoute = function () {
+    var self = this;
+    if (self.allowSave()) {
+        if (!window.confirm('This will undo all the changes you\'ve made to the current route - are you sure you want to continue?')) return;
+    }
+    var curRoute = self.currentRoute();
+    if (curRoute != null) curRoute.reload(function (result) { self.reset(result); });
+    else new MyRouteModel(self, self.routeId(), '', 0, '', '', '').loadRoute();
+}
+RouteDisplayModel.prototype.saveRoute = function (loginPromptDialog) {
+    var self = this;
+    // if a public route, prompt that a copy will be created
+    if (self.routePublicOther()) {
+        if (!window.confirm('This is a public route created by someone else. Saving the route will create a copy under your account - do you want to continue?')) return;
+    }
+
+    if (!loginAccountModel.isLoggedIn) {
+        loginPromptDialog.dialog('open');
+        loginPromptDialog.bind('dialogclose', function () {
+            $.post(Models.urls.routeBeforeLogin, { id: self.routeId(), name: self.routeName(), notes: self.routeNotes(), public: self.routePublic(), points: self.pointsToJson(), distance: self.distance() },
+                            function (result) {
+                                if (!result.Completed) {
+                                    alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
+                                    return;
+                                }
+                                loginAccountModel.showLoginDialog();
+                                loginAccountModel.returnPage = Models.url.routeNew;
+                                loginPromptDialog.unbind('dialogclose');
+                            });
+        });
+    } else {
+        $.post(Models.urls.routeSave, { id: self.routeId(), name: self.routeName(), notes: self.routeNotes(), public: self.routePublic(), points: self.pointsToJson(), distance: self.distance() },
+                        function (result) {
+                            if (!result.Completed) {
+                                alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
+                                return;
+                            }
+                            var priorRouteId = self.routeId();
+                            var priorPublicOther = self.routePublicOther();
+                            var isSavedRoute = priorRouteId > 0;
+                            self.reset(result.Route);
+                            if (isSavedRoute && !priorPublicOther) {
+                                if (priorRouteId != self.routeId()) {
+                                    for (var i = 0; i < self.myRoutes().length; i++)
+                                        if (self.myRoutes()[i].routeId() == priorRouteId)
+                                            self.myRoutes()[i].routeId(self.routeId());
+                                }
+                                self.refreshMyRoute(result.Route);
+                            } else {
+                                self.myRoutes.push(new MyRouteModel(self, result.Route.Id, result.Route.Name, result.Route.Distance.toFixed(2), result.Route.LastRun, result.Route.Notes, ''));
+                            }
+                        }
+                    );
+    }
+}
+RouteDisplayModel.prototype.deleteRoute = function () {
+    if (!window.confirm('This will delete the route - are you sure you want to continue?')) return;
+
+    var self = this;
+    $.post(Models.urls.routeDelete, { id: self.routeId() },
+                    function (result) {
+                        if (!result.Completed) {
+                            alert('There was a problem deleting this route.\n\nMore details:\n' + result.Reason);
+                            return;
+                        }
+                        for (var i = 0; i < self.myRoutes().length; i++)
+                            if (self.myRoutes()[i].routeId() == self.routeId())
+                                self.myRoutes.remove(self.myRoutes()[i]);
+                        self.reset();
+                    }
+                );
+}
+RouteDisplayModel.prototype.findRoute = function (query) {
+    var self = this;
+    $.post(Models.urls.find, { q: query },
+                function (result) {
+                    if (!result.Completed) {
+                        self.foundRouteText('Could not search for routes: ' + result.Reason);
+                        return;
+                    }
+                    self.foundRoutes.removeAll();
+                    for (var i = 0; i < result.Routes.length; i++)
+                        self.foundRoutes.push(new MyRouteModel(self, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+                    if (self.foundRoutes().length == 0)
+                        self.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
+                }
+            );
+    return false;
+}
+RouteDisplayModel.prototype.loadMyRoutes = function (callback) {
+    var self = this;
+    $.post(Models.urls.myRoutes,
+            function (result) {
+                if (!result.Completed) {
+                    return;
+                }
+                self.myRoutes.removeAll();
+                for (var i = 0; i < result.Routes.length; i++)
+                    self.myRoutes.push(new MyRouteModel(self, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
+
+                if (typeof (callback) == 'function') callback();
+            }
+        );
+}
+RouteDisplayModel.prototype.loadRequestedRoute = function () {
+    var routeId = parseInt(RouteDisplayModel.getParameterByName('route'));
+    if (!isNaN(routeId)) {
+        for (var i = 0; i < this.myRoutes().length; i++)
+            if (this.myRoutes()[i].routeId() == routeId) {
+                this.myRoutes()[i].loadRoute();
+                return;
+            }
+        // not one of my routes, perhaps it's a public route, so load it up:
+        new MyRouteModel(this, routeId, '', 0, '', '', '').loadRoute();
+
+        if (routeId == 0 && loginAccountModel.loginError)
+            loginAccountModel.returnPage = Models.urls.routeNew;
+    }
+}
+RouteDisplayModel.prototype.updateFromUnitsModel = function () {
+    this.distanceUnits(unitsModel.currentUnitsName);
+    this.redrawRoute();
+    this.loadMyRoutes();
 }

@@ -13,116 +13,13 @@
         var routeModel = new RouteDisplayModel();
         routeModel.createMap('#mapDiv');
 
-        $('#routeNew')
-            .button({ icons: { primary: "ui-icon-newwin" }, text: false })
-            .click(function () {
-                if (routeModel.allowSave() || routeModel.routePointCount() > 0) {
-                    if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
-                }
-                routeModel.reset();
-            });
-
-        $('#routeReset')
-            .button({ icons: { primary: "ui-icon-refresh" }, text: false })
-            .click(function () {
-                if (routeModel.allowSave()) {
-                    if (!window.confirm('This will undo all the changes you\'ve made to the current route - are you sure you want to continue?')) return;
-                }
-                var curRoute = routeModel.currentRoute();
-                if (curRoute != null) curRoute.reload(function (result) { routeModel.reset(result); });
-                else new MyRouteModel(routeModel, routeModel.routeId(), '', 0, '', '', '').loadRoute();
-            });
-
-        $('#routeUndo')
-            .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
-            .click(function () {
-                routeModel.undoLastPoint();
-            });
-
-        $('#routeSave')
-            .button({ icons: { primary: "ui-icon-circle-check" }, text: false })
-            .click(function () {
-                // if a public route, prompt that a copy will be created
-                if (routeModel.routePublicOther()) {
-                    if (!window.confirm('This is a public route created by someone else. Saving the route will create a copy under your account - do you want to continue?')) return;
-                }
-
-                if (!loginAccountModel.isLoggedIn) {
-                    loginPromptDialog.dialog('open');
-                    loginPromptDialog.bind('dialogclose', function () {
-                        $.post('@Url.Action("beforelogin", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
-                            function (result) {
-                                if (!result.Completed) {
-                                    alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
-                                    return;
-                                }
-                                loginAccountModel.showLoginDialog();
-                                loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?route=0';
-                                loginPromptDialog.unbind('dialogclose');
-                            });
-                    });
-                } else {
-                    $.post('@Url.Action("save", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
-                        function (result) {
-                            if (!result.Completed) {
-                                alert('There was a problem saving the changes to your route.\n\nMore details:\n' + result.Reason);
-                                return;
-                            }
-                            var priorRouteId = routeModel.routeId();
-                            var priorPublicOther = routeModel.routePublicOther();
-                            var isSavedRoute = priorRouteId > 0;
-                            routeModel.reset(result.Route);
-                            if (isSavedRoute && !priorPublicOther) {
-                                if (priorRouteId != routeModel.routeId()) {
-                                    for (var i = 0; i < routeModel.myRoutes().length; i++)
-                                        if (routeModel.myRoutes()[i].routeId() == priorRouteId)
-                                            routeModel.myRoutes()[i].routeId(routeModel.routeId());
-                                }
-                                routeModel.refreshMyRoute(result.Route);
-                            } else {
-                                routeModel.myRoutes.push(new MyRouteModel(routeModel, result.Route.Id, result.Route.Name, result.Route.Distance.toFixed(2), result.Route.LastRun, result.Route.Notes, ''));
-                            }
-                        }
-                    );
-                }
-            });
-
-        $('#routeDelete')
-            .button({ icons: { primary: "ui-icon-closethick" }, text: false })
-            .click(function () {
-                if (!window.confirm('This will delete the route - are you sure you want to continue?')) return;
-
-                $.post('@Url.Action("delete", "routepal")', { id: routeModel.routeId() },
-                    function (result) {
-                        if (!result.Completed) {
-                            alert('There was a problem deleting this route.\n\nMore details:\n' + result.Reason);
-                            return;
-                        }
-                        for (var i = 0; i < routeModel.myRoutes().length; i++)
-                            if (routeModel.myRoutes()[i].routeId() == routeModel.routeId())
-                                routeModel.myRoutes.remove(routeModel.myRoutes()[i]);
-                        routeModel.reset();
-                    }
-                );
-            });
-
-        $('#findARoute').submit(function () {
-            var query = $('#q').val();
-            $.post('@Url.Action("find", "routepal")', { q: query },
-                function (result) {
-                    if (!result.Completed) {
-                        routeModel.foundRouteText('Could not search for routes: ' + result.Reason);
-                        return;
-                    }
-                    routeModel.foundRoutes.removeAll();
-                    for (var i = 0; i < result.Routes.length; i++)
-                        routeModel.foundRoutes.push(new MyRouteModel(routeModel, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
-                    if (routeModel.foundRoutes().length == 0)
-                        routeModel.foundRouteText('No routes found matching your search string. Try modifying your search and try again.');
-                }
-            );
-            return false;
-        });
+        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { routeModel.newRoute(); });
+        $('#routeReset').button({ icons: { primary: "ui-icon-refresh" }, text: false }).click(function () { routeModel.resetRoute(); });
+        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { routeModel.undoLastPoint(); });
+        $('#routeSave').button({ icons: { primary: "ui-icon-circle-check" }, text: false }).click(function () { routeModel.saveRoute(loginPromptDialog); });
+        $('#routeDelete').button({ icons: { primary: "ui-icon-closethick" }, text: false }).click(function () { routeModel.deleteRoute(); });
+        $('#findARoute').submit(function () { return routeModel.findRoute($('#q').val()); });
+        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
 
         ko.bindingHandlers.buttonEnabled = {
             update: function (element, valueAccessor, allBindingsAccessor, viewModel) {
@@ -130,55 +27,10 @@
             }
         };
         ko.applyBindings(routeModel);
-        loadMyRoutes(routeModel, function () {
-            var routeId = parseInt(getParameterByName('route'));
-            if (!isNaN(routeId)) {
-                for (var i = 0; i < routeModel.myRoutes().length; i++)
-                    if (routeModel.myRoutes()[i].routeId() == routeId) {
-                        routeModel.myRoutes()[i].loadRoute();
-                        return;
-                    }
-                // not one of my routes, perhaps it's a public route, so load it up:
-                new MyRouteModel(routeModel, routeId, '', 0, '', '', '').loadRoute();
+        unitsModel.change(function (u) { routeModel.updateFromUnitsModel(); });
 
-                if (routeId == 0 && loginAccountModel.loginError)
-                    loginAccountModel.returnPage = '@(Url.Action("index", "routepal"))?route=0';
-            }
-        });
-
-        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
-        unitsModel.change(function (u) {
-            routeModel.distanceUnits(unitsModel.currentUnitsName);
-            routeModel.redrawRoute();
-            loadMyRoutes(routeModel);
-        });
+        routeModel.loadMyRoutes(function () { routeModel.loadRequestedRoute(); });
     });
-
-    function getParameterByName(name) { 
-      name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]"); 
-      var regexS = "[\\?&]" + name + "=([^&#]*)"; 
-      var regex = new RegExp(regexS); 
-      var results = regex.exec(window.location.search); 
-      if (results == null) 
-        return ""; 
-      else 
-        return decodeURIComponent(results[1].replace(/\+/g, " ")); 
-    }
-
-    function loadMyRoutes(model, callback) {
-        $.post('@Url.Action("myroutes", "routepal")',
-            function (result) {
-                if (!result.Completed) {
-                    return;
-                }
-                model.myRoutes.removeAll();
-                for (var i = 0; i < result.Routes.length; i++)
-                    model.myRoutes.push(new MyRouteModel(model, result.Routes[i].Id, result.Routes[i].Name, result.Routes[i].Distance, result.Routes[i].LastRun, result.Routes[i].Notes, result.Routes[i].LastRunBy));
-
-                if (typeof(callback) == 'function') callback();
-            }
-        );
-    }
 </script>
 
 <h1>Routes</h1>

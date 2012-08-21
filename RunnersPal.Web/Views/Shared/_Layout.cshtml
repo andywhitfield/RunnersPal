@@ -35,7 +35,9 @@
             viewRunLog: '@Url.Action("view", "runlog")', runLogEvents: '@Url.Action("allevents", "runlog")',
             addRun: '@Url.Action("add", "runlog")', updateRun: '@Url.Action("edit", "runlog")',
             deleteRun: '@Url.Action("delete", "runlog")', find: '@Url.Action("find", "routepal")',
-            loadRoute: '@Url.Action("load", "routepal")'
+            loadRoute: '@Url.Action("load", "routepal")', routeBeforeLogin: '@Url.Action("beforelogin", "routepal")',
+            routeNew: '@(Url.Action("index", "routepal"))?route=0', routeSave: '@Url.Action("save", "routepal")',
+            routeDelete: '@Url.Action("delete", "routepal")'
         };
 
         $(function () {
