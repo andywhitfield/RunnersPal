@@ -412,3 +412,5 @@ input.loginOpenId { background-image: url(openid.ico.png); background-repeat: no
 .distanceMarker div { color: black !important; }
 span.toggleDistUnits { text-decoration: underline; cursor: pointer; }
 span.toggleDistUnits:hover { text-decoration: none; cursor: pointer; }
+
+#routeManagement { height: 500px; }

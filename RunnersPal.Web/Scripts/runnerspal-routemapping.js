@@ -7,7 +7,7 @@
 
 var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
 
-function MyRouteModel(owner, id, name, distance, lastRunOn, notes) {
+function MyRouteModel(owner, id, name, distance, lastRunOn, notes, lastRunBy) {
     var self = this;
     self._owner = owner;
     self.routeId = ko.observable(id);
@@ -16,11 +16,16 @@ function MyRouteModel(owner, id, name, distance, lastRunOn, notes) {
     self.distance = ko.observable(distance);
     self.distanceUnits = ko.observable(unitsModel.currentUnitsName);
     self.lastRunOn = ko.observable(lastRunOn);
+    self.lastRunBy = ko.observable(lastRunBy);
 
     self.showLastRun = ko.computed(function() { return self.lastRunOn() != null && self.lastRunOn() != ""; }, this);
     self.lastRunText = ko.computed(function() {
         if (!self.showLastRun()) return "";
-        return "Last run on " + self.lastRunOn() + ".";
+        var lastRunTxt = "Last run on " + self.lastRunOn();
+        if (self.lastRunBy() != null && self.lastRunBy() != "")
+            lastRunTxt += " by " + self.lastRunBy();
+        lastRunTxt += ".";
+        return lastRunTxt;
     }, this);
 }
 MyRouteModel.prototype.chooseRoute = function() {
@@ -28,6 +33,25 @@ MyRouteModel.prototype.chooseRoute = function() {
     this._owner.route(this.routeId());
     this._owner.distance(this.routeName() + ", " + this.distance() + " " + this.distanceUnits());
     $('#add-run-time').focus().select();
+}
+MyRouteModel.prototype.loadRoute = function() {
+    var self = this;
+    self.reload(function(result) {
+        $("#routeManagementOptions").accordion({ active: 2 });
+        self._owner.reset(result);
+    });
+}
+MyRouteModel.prototype.reload = function(callback) {
+    var self = this;
+    $.post(Models.urls.loadRoute, { id: self.routeId() },
+        function (result) {
+            if (!result.Completed) {
+                alert('There was a problem loading your route.\n\nMore details:\n' + result.Reason);
+                return;
+            }
+            callback(result.Route);
+        }
+    );
 }
 
 function RouteMapping(model) {
@@ -127,7 +151,7 @@ function AddRunModel() {
     this.time = ko.observable("");
     this.pace = ko.observable("0");
     this.paceCalc = ko.computed(function () {
-        $.post(AddRunModel.urls.calcPace, { route: this.route(), distance: this.distance(), time: this.time(), calc: 'pace' },
+        $.post(Models.urls.calcPace, { route: this.route(), distance: this.distance(), time: this.time(), calc: 'pace' },
             function (result) {
                 self.pace(result.Pace);
             }
@@ -136,7 +160,7 @@ function AddRunModel() {
     this.calories = ko.observable("0");
     this.caloriesCalc = ko.computed(function () {
         if (!this.eventDate()) return;
-        $.post(AddRunModel.urls.autoCalcCalories, { date: this.eventDate().toUTCString(), route: this.route(), distance: this.distance() },
+        $.post(Models.urls.autoCalcCalories, { date: this.eventDate().toUTCString(), route: this.route(), distance: this.distance() },
             function (result) {
                 if (!result.Result) return;
                 self.calories(result.Calories);
@@ -159,7 +183,7 @@ AddRunModel.prototype.applyOpenRouteBtn = function () {
 }
 AddRunModel.prototype.fetchMyRoutes = function () {
     var self = this;
-    $.post(AddRunModel.urls.myRoutes,
+    $.post(Models.urls.myRoutes,
         function (result) {
             if (!result.Completed) {
                 return;
@@ -174,10 +198,10 @@ AddRunModel.prototype.addRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
     var routeId = self.route();
-    $.post(AddRunModel.urls.addRun, { date: eventDate.toUTCString(), distance: self.distance(),
+    $.post(Models.urls.addRun, { date: eventDate.toUTCString(), distance: self.distance(),
         route: routeId, time: self.time(), comment: self.comment(),
-        self: self.mapping.routeName(), newRouteNotes: self.mapping.routeNotes(),
-        self: self.mapping.routePublic(), newRoutePoints: self.mapping.pointsToJson()
+        newRouteName: self.mapping.routeName(), newRouteNotes: self.mapping.routeNotes(),
+        newRoutePublic: self.mapping.routePublic(), newRoutePoints: self.mapping.pointsToJson()
         },
         function (result) {
             if (!result.Completed) {
@@ -194,7 +218,7 @@ AddRunModel.prototype.addRun = function (calendar, addRunDialog) {
 AddRunModel.prototype.updateRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
-    $.post(AddRunModel.urls.updateRun, { runLogId: self.runLogId(), date: eventDate.toUTCString(), distance: self.distance(), route: self.route(), time: self.time(), comment: self.comment() },
+    $.post(Models.urls.updateRun, { runLogId: self.runLogId(), date: eventDate.toUTCString(), distance: self.distance(), route: self.route(), time: self.time(), comment: self.comment() },
         function (result) {
             if (!result.Completed) {
                 alert('Could not update this event\n\n' + result.Reason);
@@ -208,7 +232,7 @@ AddRunModel.prototype.updateRun = function (calendar, addRunDialog) {
 AddRunModel.prototype.deleteRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
-    $.post(AddRunModel.urls.deleteRun, { runLogId: self.runLogId() },
+    $.post(Models.urls.deleteRun, { runLogId: self.runLogId() },
         function (result) {
             if (!result.Completed) {
                 alert('Could not delete this event.\n\n' + result.Reason);
@@ -225,7 +249,7 @@ AddRunModel.prototype.updateFromUnitsModel = function () {
     self.distanceUnitsSingular(unitsModel.currentSingularUnitsName);
 
     if (self.route() < 0)
-        $.post(AddRunModel.urls.calcDist, { distanceKm: self.distance(), distanceM: self.distance(), calc: unitsModel.currentUnitsName },
+        $.post(Models.urls.calcDist, { distanceKm: self.distance(), distanceM: self.distance(), calc: unitsModel.currentUnitsName },
             function (result) {
                 var newDistance = unitsModel.isCurrentUnitsMiles() ? result.DistanceM : result.DistanceKm;
                 if (newDistance == null) return;
@@ -279,7 +303,7 @@ AddRunModel.prototype.createDistanceSelection = function (accordianEl, commonRou
             });
 }
 AddRunModel.prototype.startNew = function () {
-    if (this.mapping.routeModified() || this.mapping.routePointCount() > 0) {
+    if (this.mapping.allowSave() || this.mapping.routePointCount() > 0) {
         if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
     }
     this.mapping.reset();
@@ -290,7 +314,7 @@ AddRunModel.prototype.undo = function () {
 AddRunModel.prototype.find = function (findEl) {
     var self = this;
     var query = $(findEl).val();
-    $.post(AddRunModel.urls.find, { q: query },
+    $.post(Models.urls.find, { q: query },
                 function (result) {
                     if (!result.Completed) {
                         self.foundRouteText('Could not search for routes: ' + result.Reason);
@@ -369,7 +393,7 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
                 loginPromptDialog.dialog('open');
                 loginPromptDialog.bind('dialogclose', function () {
                     loginAccountModel.showLoginDialog();
-                    loginAccountModel.returnPage = AddRunModel.urls.runLog + start.yyyymmdd();
+                    loginAccountModel.returnPage = Models.urls.runLog + start.yyyymmdd();
                     loginPromptDialog.unbind('dialogclose');
                 });
             } else {
@@ -391,7 +415,7 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
             $(this).fullCalendar('unselect');
         },
         eventClick: function (evt) {
-            $.post(AddRunModel.urls.viewRunLog, { runlogid: evt.id },
+            $.post(Models.urls.viewRunLog, { runlogid: evt.id },
                         function (result) {
                             if (!result.Completed) {
                                 alert('Could not open event.\n\n' + result.Reason);
@@ -421,7 +445,7 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
                         });
         },
         editable: false,
-        events: AddRunModel.urls.runLogEvents
+        events: Models.urls.runLogEvents
     });
 }
 AddRunModel.checkAddEvent = function (loginAccountModel, calendar) {
@@ -431,7 +455,164 @@ AddRunModel.checkAddEvent = function (loginAccountModel, calendar) {
             var eventDate = new Date(hashItem.substring(10));
             calendar.fullCalendar('select', eventDate, eventDate, 1);
         } else {
-            loginAccountModel.returnPage = AddRunModel.urls.runLogBase + hashItem;
+            loginAccountModel.returnPage = Models.urls.runLogBase + hashItem;
         }
+    }
+}
+
+function RouteDisplayModel() {
+    this._route = null;
+    this.routeId = ko.observable(0);
+    this.routeName = ko.observable("");
+    this.originalRouteName = ko.observable("");
+    this.routeNotes = ko.observable("");
+    this.originalRouteNotes = ko.observable("");
+    this.routePublic = ko.observable(false);
+    this.originalRoutePublic = ko.observable(false);
+    this.routeModified = ko.observable(false);
+    this.routePointCount = ko.observable(0);
+    this.routePublicOther = ko.observable(false);
+    this.routeDeleted = ko.observable(false);
+    this.allowSave = ko.computed(function() {
+        if (this.routeName() == "" || this.routeDeleted()) return false;
+        if (this.route != null && this.routePointCount() == 0) return false;
+        if (this.routeModified()) return true;
+        if (this.routeId() > 0) {
+            if (this.routeName() != this.originalRouteName()) return true;
+            if (this.routeNotes() != this.originalRouteNotes()) return true;
+            if (this.routePublic() != this.originalRoutePublic()) return true;
+        }
+        return false;
+    }, this);
+    this.allowDelete = ko.computed(function() {
+        return this.routeId() > 0 && !this.routePublicOther() && !this.routeDeleted();
+    }, this);
+    this.distance = ko.observable(0.00);
+    this.distanceDisplay = ko.computed(function() { return this.distance() == 0 ? "0" : this.distance().toFixed(4); }, this);
+    this.distanceUnits = ko.observable(unitsModel.currentUnitsName);
+    this.allowUndo = ko.computed(function() { return this.distanceDisplay() != "0" || (this.routePointCount() > 0); }, this);
+
+    this.myRoutes = ko.observableArray([]);
+    this.foundRoutes = ko.observableArray([]);
+    this.foundRouteText = ko.observable("");
+}
+RouteDisplayModel.prototype.addRoutePoint = function(p) {
+    if (this._route == null) return;
+    this._route.addPoint(p);
+    this.routePointCount(this._route.pointCount());
+    this.routeModified(true);
+    this.distance(this._route.totalDistance() * kmUnitMultiplier());
+}
+RouteDisplayModel.prototype.undoLastPoint = function() {
+    if (this._route == null) return;
+    this._route.undo();
+    this.routePointCount(this._route.pointCount());
+    this.routeModified(true);
+    this.distance(this._route.totalDistance() * kmUnitMultiplier());
+}
+RouteDisplayModel.prototype.pointsToJson = function() {
+    if (this._route == null) return "[]";
+    return this._route.toJson();
+}
+RouteDisplayModel.prototype.reset = function(json) {
+    if (typeof(json) == "undefined" || json == null)
+        json = { Id: 0, Name: "", Notes: "", Public: false, Points: [] };
+            
+    this.routeId(json.Id);
+    this.routeName(json.Name);
+    this.originalRouteName(json.Name);
+    this.routeNotes(json.Notes);
+    this.originalRouteNotes(json.Notes);
+    this.routePublic(json.Public);
+    this.originalRoutePublic(json.Public);
+    this.routePublicOther(json.PublicOther);
+    this.routeDeleted(json.Deleted);
+    this.distance(0.00);
+
+    if (this._route != null) {
+        this._route.clear();
+        this.routePointCount(this._route.pointCount());
+        if (typeof(json.Points) == "string") {
+            var mapPoints = $.parseJSON(json.Points);
+            for (var i = 0; i < mapPoints.length; i++)
+                this.addRoutePoint(mapPoints[i]);
+            if (mapPoints.length > 0)
+                this._route.setView(mapPoints[0], 14);
+        }
+    }
+    this.routeModified(false);
+}
+RouteDisplayModel.prototype.redrawRoute = function() {
+    this.distance(0.00);
+    if (this._route != null) {
+        var points = this._route.points();
+        this._route.distanceMarkerUnits(1 / kmUnitMultiplier());
+        this._route.clear();
+        for (var i = 0; i < points.length; i++)
+            this.addRoutePoint(points[i].toMapsLocation());
+    }
+}
+RouteDisplayModel.prototype.refreshMyRoute = function(json) {
+    var myRoute = this.currentRoute();
+    if (myRoute == null) return;
+    myRoute.routeId(json.Id);
+    myRoute.routeName(json.Name);
+    myRoute.routeNotes(json.Notes);
+    myRoute.lastRunOn(json.LastRun);
+    myRoute.lastRunBy("");
+    myRoute.distance(json.Distance.toFixed(2));
+}
+RouteDisplayModel.prototype.currentRoute = function() {
+    if (this.routeId() < 1) return null;
+    for (var i = 0; i < this.myRoutes().length; i++) {
+        var route = this.myRoutes()[i];
+        if (route.routeId() == this.routeId()) return route;
+    }
+    for (var i = 0; i < this.foundRoutes().length; i++) {
+        var route = this.foundRoutes()[i];
+        if (route.routeId() == this.routeId()) return route;
+    }
+    return null;
+}
+RouteDisplayModel.prototype.createMap = function (mapDiv) {
+    var self = this;
+    if (typeof (Microsoft) != "undefined") {
+        var map = new Microsoft.Maps.Map($(mapDiv)[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
+        Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
+            e.handled = true;
+            self.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
+        });
+        map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
+
+        if (typeof (navigator) != "undefined" && typeof (navigator.geolocation) != "undefined" && typeof (navigator.geolocation.getCurrentPosition) == "function") {
+            navigator.geolocation.getCurrentPosition(
+                  function (pos) {
+                      map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
+                  },
+                  function () { }
+                );
+        }
+
+        var theRoute = new MapRoute(map);
+        theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
+        self._route = theRoute;
+    } else {
+        self._route = new function () {
+            this._points = [];
+            this.toJson = function () { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
+            this.clear = function () { this._points = []; };
+            this.addPoint = function (p) { this._points.push(p); };
+            this.pointCount = function () { return this._points.length; };
+            this.totalDistance = function () { return this.pointCount() * 2; };
+            this.distanceMarkerUnits = function (u) { return 1; };
+            this.points = function () { return this._points; };
+            this.setView = function () { };
+            this.undo = function () { };
+        };
+        $(mapDiv).html('<p id="fakeMap">Maps not available.</p>');
+        $('#fakeMap').click(function () {
+            self.routeModified(true);
+            self.distance(7.7);
+        });
     }
 }

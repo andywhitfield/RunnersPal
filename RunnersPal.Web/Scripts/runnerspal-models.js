@@ -1,4 +1,8 @@
-﻿function LoginAccountModel(logoutUrl) {
+﻿function Models() {
+
+};
+
+function LoginAccountModel(logoutUrl) {
     this._initdElements = false;
     this.loginSection = null;
     this.loggedInSection = null;

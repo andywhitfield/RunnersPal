@@ -1,234 +1,21 @@
 ﻿@{
     ViewBag.Title = "Route:Pal";
     ViewBag.SelectedTab = "RoutePal";
-    ViewBag.Scripts = new[] { "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
+    ViewBag.Scripts = new[] { "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-routemapping.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
 }
-<style>
-#routeManagement { height: 500px; }
-</style>
 <script type="text/javascript">
-    var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
-
-    function MyRouteModel(routeModel, id, name, distance, lastRunOn, notes, lastRunBy) {
-        var self = this;
-        self._routeModel = routeModel;
-        self.routeId = ko.observable(id);
-        self.routeName = ko.observable(name);
-        self.routeNotes = ko.observable(notes);
-        self.distance = ko.observable(distance);
-        self.distanceUnits = ko.observable(unitsModel.currentUnitsName);
-        self.lastRunOn = ko.observable(lastRunOn);
-        self.lastRunBy = ko.observable(lastRunBy);
-
-        self.showLastRun = ko.computed(function() { return self.lastRunOn() != null && self.lastRunOn() != ""; }, this);
-        self.lastRunText = ko.computed(function() {
-            if (!self.showLastRun()) return "";
-            var lastRunTxt = "Last run on " + self.lastRunOn();
-            if (self.lastRunBy() != null && self.lastRunBy() != "")
-                lastRunTxt += " by " + self.lastRunBy();
-            lastRunTxt += ".";
-            return lastRunTxt;
-        }, this);
-
-        self.loadRoute = function() {
-            self.reload(function(result) {
-                $("#routeManagementOptions").accordion({ active: 2 });
-                self._routeModel.reset(result);
-            });
-        };
-        self.reload = function(callback) {
-            $.post('@Url.Action("load", "routepal")', { id: self.routeId() },
-                function (result) {
-                    if (!result.Completed) {
-                        alert('There was a problem loading your route.\n\nMore details:\n' + result.Reason);
-                        return;
-                    }
-                    callback(result.Route);
-                }
-            );
-        };
-    }
-
-    function RouteDisplayModel() {
-        this._route = null;
-        this.routeId = ko.observable(0);
-        this.routeName = ko.observable("");
-        this.originalRouteName = ko.observable("");
-        this.routeNotes = ko.observable("");
-        this.originalRouteNotes = ko.observable("");
-        this.routePublic = ko.observable(false);
-        this.originalRoutePublic = ko.observable(false);
-        this.routeModified = ko.observable(false);
-        this.routePointCount = ko.observable(0);
-        this.routePublicOther = ko.observable(false);
-        this.routeDeleted = ko.observable(false);
-        this.allowSave = ko.computed(function() {
-            if (this.routeName() == "" || this.routeDeleted()) return false;
-            if (this.route != null && this.routePointCount() == 0) return false;
-            if (this.routeModified()) return true;
-            if (this.routeId() > 0) {
-                if (this.routeName() != this.originalRouteName()) return true;
-                if (this.routeNotes() != this.originalRouteNotes()) return true;
-                if (this.routePublic() != this.originalRoutePublic()) return true;
-            }
-            return false;
-        }, this);
-        this.allowDelete = ko.computed(function() {
-            return this.routeId() > 0 && !this.routePublicOther() && !this.routeDeleted();
-        }, this);
-        this.distance = ko.observable(0.00);
-        this.distanceDisplay = ko.computed(function() { return this.distance() == 0 ? "0" : this.distance().toFixed(4); }, this);
-        this.distanceUnits = ko.observable("@ViewContext.UserDistanceUnits("a")");
-        this.allowUndo = ko.computed(function() { return this.distanceDisplay() != "0" || (this.routePointCount() > 0); }, this);
-
-        this.addRoutePoint = function(p) {
-            if (this._route == null) return;
-            this._route.addPoint(p);
-            this.routePointCount(this._route.pointCount());
-            this.routeModified(true);
-            this.distance(this._route.totalDistance() * kmUnitMultiplier());
-        };
-        this.undoLastPoint = function() {
-            if (this._route == null) return;
-            this._route.undo();
-            this.routePointCount(this._route.pointCount());
-            this.routeModified(true);
-            this.distance(this._route.totalDistance() * kmUnitMultiplier());
-        };
-        this.pointsToJson = function() {
-            if (this._route == null) return "[]";
-            return this._route.toJson();
-        }
-
-        this.reset = function(json) {
-            if (typeof(json) == "undefined" || json == null)
-                json = { Id: 0, Name: "", Notes: "", Public: false, Points: [] };
-            
-            this.routeId(json.Id);
-            this.routeName(json.Name);
-            this.originalRouteName(json.Name);
-            this.routeNotes(json.Notes);
-            this.originalRouteNotes(json.Notes);
-            this.routePublic(json.Public);
-            this.originalRoutePublic(json.Public);
-            this.routePublicOther(json.PublicOther);
-            this.routeDeleted(json.Deleted);
-            this.distance(0.00);
-
-            if (this._route != null) {
-                this._route.clear();
-                this.routePointCount(this._route.pointCount());
-                if (typeof(json.Points) == "string") {
-                    var mapPoints = $.parseJSON(json.Points);
-                    for (var i = 0; i < mapPoints.length; i++)
-                        this.addRoutePoint(mapPoints[i]);
-                    if (mapPoints.length > 0)
-                        this._route.setView(mapPoints[0], 14);
-                }
-            }
-            this.routeModified(false);
-        };
-        this.redrawRoute = function() {
-            this.distance(0.00);
-            if (this._route != null) {
-                var points = this._route.points();
-                this._route.distanceMarkerUnits(1 / kmUnitMultiplier());
-                this._route.clear();
-                for (var i = 0; i < points.length; i++)
-                    this.addRoutePoint(points[i].toMapsLocation());
-            }
-        };
-
-        this.myRoutes = ko.observableArray([]);
-        this.refreshMyRoute = function(json) {
-            var myRoute = this.currentRoute();
-            if (myRoute == null) return;
-            myRoute.routeId(json.Id);
-            myRoute.routeName(json.Name);
-            myRoute.routeNotes(json.Notes);
-            myRoute.lastRunOn(json.LastRun);
-            myRoute.lastRunBy("");
-            myRoute.distance(json.Distance.toFixed(2));
-        };
-        this.currentRoute = function() {
-            if (this.routeId() < 1) return null;
-            for (var i = 0; i < this.myRoutes().length; i++) {
-                var route = this.myRoutes()[i];
-                if (route.routeId() == this.routeId()) return route;
-            }
-            for (var i = 0; i < this.foundRoutes().length; i++) {
-                var route = this.foundRoutes()[i];
-                if (route.routeId() == this.routeId()) return route;
-            }
-            return null;
-        };
-
-        this.foundRoutes = ko.observableArray([]);
-        this.foundRouteText = ko.observable("");
-    }
-
     $(function () {
         $("#routeManagementOptions").accordion({ fillSpace: true, active: 2 });
-        $("#routeManagement").resizable({
-            minHeight: 250,
-            handles: "s",
-            resize: function () {
-                $("#routeManagementOptions").accordion("resize");
-            },
-            alsoResize: "#mapDiv"
-        });
+        $("#routeManagement").resizable({ minHeight: 250, handles: "s", resize: function () { $("#routeManagementOptions").accordion("resize"); }, alsoResize: "#mapDiv" });
 
-        var loginPromptDialog = $("#loginPromptDialog").dialog({
-			height: 280,
-            width: 400,
-			modal: true,
-            buttons: { OK: function() { $(this).dialog("close"); } },
-            autoOpen: false
-		});
+        var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 400, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
 
         var routeModel = new RouteDisplayModel();
-        if (typeof (Microsoft) != "undefined") {
-            var map = new Microsoft.Maps.Map($('#mapDiv')[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
-            Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
-                e.handled = true;
-                routeModel.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
-            });
-            map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
-
-            if (typeof(navigator) != "undefined" && typeof(navigator.geolocation) != "undefined" && typeof(navigator.geolocation.getCurrentPosition) == "function") {
-                navigator.geolocation.getCurrentPosition(
-                  function(pos) {
-                    map.setView({ zoom: 10, center: new Microsoft.Maps.Location(pos.coords.latitude, pos.coords.longitude) });
-                  },
-                  function() { }
-                );
-            }
-
-            var theRoute = new MapRoute(map);
-            theRoute.distanceMarkerUnits(1 / kmUnitMultiplier());
-            routeModel._route = theRoute;
-        } else {
-            routeModel._route = new function() {
-                this._points = [];
-                this.toJson = function() { return '[{ "latitude": 51.51106837017983, "longitude": -0.09557971954345268 },{ "latitude": 51.51104166123068, "longitude": -0.09682426452636283 },{ "latitude": 51.51204166123068, "longitude": -0.09662426452636283 }]'; };
-                this.clear = function() { this._points = []; };
-                this.addPoint = function(p) { this._points.push(p); };
-                this.pointCount = function() { return this._points.length; };
-                this.totalDistance = function() { return this.pointCount() * 2; };
-                this.distanceMarkerUnits = function(u) { return 1; };
-                this.points = function() { return this._points; };
-                this.setView = function() {};
-            };
-            $('#mapDiv').html('<p id="fakeMap">Maps not available.</p>');
-            $('#fakeMap').click(function() {
-                routeModel.routeModified(true);
-                routeModel.distance(7.7);
-            });
-        }
+        routeModel.createMap('#mapDiv');
 
         $('#routeNew')
             .button({ icons: { primary: "ui-icon-newwin" }, text: false })
-            .click(function() {
+            .click(function () {
                 if (routeModel.allowSave() || routeModel.routePointCount() > 0) {
                     if (!window.confirm('This will clear the current route - are you sure you want to continue?')) return;
                 }
@@ -237,24 +24,24 @@
 
         $('#routeReset')
             .button({ icons: { primary: "ui-icon-refresh" }, text: false })
-            .click(function() {
+            .click(function () {
                 if (routeModel.allowSave()) {
                     if (!window.confirm('This will undo all the changes you\'ve made to the current route - are you sure you want to continue?')) return;
                 }
                 var curRoute = routeModel.currentRoute();
-                if (curRoute != null) curRoute.reload(function(result) { routeModel.reset(result); });
+                if (curRoute != null) curRoute.reload(function (result) { routeModel.reset(result); });
                 else new MyRouteModel(routeModel, routeModel.routeId(), '', 0, '', '', '').loadRoute();
             });
 
         $('#routeUndo')
             .button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false })
-            .click(function() {
+            .click(function () {
                 routeModel.undoLastPoint();
             });
 
         $('#routeSave')
             .button({ icons: { primary: "ui-icon-circle-check" }, text: false })
-            .click(function() {
+            .click(function () {
                 // if a public route, prompt that a copy will be created
                 if (routeModel.routePublicOther()) {
                     if (!window.confirm('This is a public route created by someone else. Saving the route will create a copy under your account - do you want to continue?')) return;
@@ -262,7 +49,7 @@
 
                 if (!loginAccountModel.isLoggedIn) {
                     loginPromptDialog.dialog('open');
-                    loginPromptDialog.bind('dialogclose', function() {
+                    loginPromptDialog.bind('dialogclose', function () {
                         $.post('@Url.Action("beforelogin", "routepal")', { id: routeModel.routeId(), name: routeModel.routeName(), notes: routeModel.routeNotes(), public: routeModel.routePublic(), points: routeModel.pointsToJson(), distance: routeModel.distance() },
                             function (result) {
                                 if (!result.Completed) {
@@ -302,7 +89,7 @@
 
         $('#routeDelete')
             .button({ icons: { primary: "ui-icon-closethick" }, text: false })
-            .click(function() {
+            .click(function () {
                 if (!window.confirm('This will delete the route - are you sure you want to continue?')) return;
 
                 $.post('@Url.Action("delete", "routepal")', { id: routeModel.routeId() },
@@ -319,7 +106,7 @@
                 );
             });
 
-        $('#findARoute').submit(function() {
+        $('#findARoute').submit(function () {
             var query = $('#q').val();
             $.post('@Url.Action("find", "routepal")', { q: query },
                 function (result) {
@@ -338,12 +125,12 @@
         });
 
         ko.bindingHandlers.buttonEnabled = {
-            update: function(element, valueAccessor, allBindingsAccessor, viewModel) {
+            update: function (element, valueAccessor, allBindingsAccessor, viewModel) {
                 $(element).button(ko.utils.unwrapObservable(valueAccessor()) ? 'enable' : 'disable');
             }
         };
         ko.applyBindings(routeModel);
-        loadMyRoutes(routeModel, function() {
+        loadMyRoutes(routeModel, function () {
             var routeId = parseInt(getParameterByName('route'));
             if (!isNaN(routeId)) {
                 for (var i = 0; i < routeModel.myRoutes().length; i++)

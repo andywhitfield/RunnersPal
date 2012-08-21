@@ -28,6 +28,16 @@
         var loginAccountModel;
         var unitsModel;
 
+        Models.urls = {
+            calcPace: '@Url.Action("calcpace", "calculators")', autoCalcCalories: '@Url.Action("autocalccalories", "calculators")',
+            calcDist: '@Url.Action("calcdistance", "calculators")', myRoutes: '@Url.Action("myroutes", "routepal")',
+            runLogBase: '@(Url.Action("index", "runlog"))', runLog: '@(Url.Action("index", "runlog"))#addEvent=',
+            viewRunLog: '@Url.Action("view", "runlog")', runLogEvents: '@Url.Action("allevents", "runlog")',
+            addRun: '@Url.Action("add", "runlog")', updateRun: '@Url.Action("edit", "runlog")',
+            deleteRun: '@Url.Action("delete", "runlog")', find: '@Url.Action("find", "routepal")',
+            loadRoute: '@Url.Action("load", "routepal")'
+        };
+
         $(function () {
             loginAccountModel = new LoginAccountModel('@Url.Action("logout", "user")');
             loginAccountModel.isLoggedIn = @if (ViewContext.HasValidUserAccount()) {<text>true</text>} else {<text>false</text>};
