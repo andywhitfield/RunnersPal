@@ -452,7 +452,7 @@ AddRunModel.checkAddEvent = function (loginAccountModel, calendar) {
     var hashItem = window.location.hash;
     if (hashItem.indexOf("#addEvent=") == 0) {
         if (!loginAccountModel.loginError) {
-            var eventDate = new Date(parseInt(hashItem.substring(10, 14)), parseInt(hashItem.substring(15, 17)) - 1, parseInt(hashItem.substring(18, 20)));
+            var eventDate = new Date(parseInt(hashItem.substring(10, 14)), parseInt(hashItem.substring(15, 17), 10) - 1, parseInt(hashItem.substring(18, 20), 10));
             calendar.fullCalendar('select', eventDate, eventDate, 1);
         } else {
             loginAccountModel.returnPage = Models.urls.runLogBase + hashItem;
