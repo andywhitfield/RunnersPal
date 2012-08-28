@@ -55,14 +55,14 @@ namespace RunnersPal.Web.Controllers
                 return ByWeek();
             var userAccount = ControllerContext.UserAccount();
 
-            var csv = string.Format("Date,Distance ({0}),Time,Pace (min/{1}),Comment{2}", ControllerContext.UserDistanceUnits("a"), ControllerContext.UserDistanceUnits("a.s"), Environment.NewLine);
+            var csv = string.Format("Date,Distance ({0}),Time,Pace (min/{1}),Route Name,Comment{2}", ControllerContext.UserDistanceUnits("a"), ControllerContext.UserDistanceUnits("a.s"), Environment.NewLine);
             
             IEnumerable<dynamic> runEvents = MassiveDB.Current.FindRunLogEvents(userAccount, false);
 
             csv += string.Join(Environment.NewLine, runEvents
                 .OrderBy(e => e.Date)
-                .Select(e => new { Date = (DateTime)e.Date, TimeTaken = (string)e.TimeTaken, Comment = CsvSafeString(e.Comment), DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) })
-                .Select(d => string.Format("{0},{1},{2},{3},{4}", d.Date.ToString("yyyy-MM-dd"), d.DistanceAndPace.Item1.BaseDistance, d.TimeTaken, d.DistanceAndPace.Item2.Pace, d.Comment)));
+                .Select(e => new { Date = (DateTime)e.Date, TimeTaken = (string)e.TimeTaken, Comment = CsvSafeString(e.Comment), DistanceAndPace = (Tuple<Distance, PaceData, string>)DistanceAndPaceOfLogEvent(e) })
+                .Select(d => string.Format("{0},{1},{2},{3},\"{4}\",{5}", d.Date.ToString("yyyy-MM-dd"), d.DistanceAndPace.Item1.BaseDistance, d.TimeTaken, d.DistanceAndPace.Item2.Pace, d.DistanceAndPace.Item3, d.Comment)));
             
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", "runlogevents.csv");
         }
@@ -165,14 +165,14 @@ namespace RunnersPal.Web.Controllers
             });
         }
 
-        private Tuple<Distance,PaceData> DistanceAndPaceOfLogEvent(dynamic runLogEvent)
+        private Tuple<Distance,PaceData,string> DistanceAndPaceOfLogEvent(dynamic runLogEvent)
         {
             var route = ((object)runLogEvent).Route();
             var distance = ((object)route).Distance().ConvertTo(ControllerContext.UserDistanceUnits());
             var paceData = new PaceData { Distance = distance, Time = runLogEvent.TimeTaken, Calc = "Pace" };
             var paceCalc = new PaceCalculator();
             paceCalc.Calculate(paceData);
-            return Tuple.Create(distance, paceData);
+            return Tuple.Create(distance, paceData, route.Name.Replace('"', '\''));
         }
         private DateTime WeekEnding(DateTime dt)
         {
