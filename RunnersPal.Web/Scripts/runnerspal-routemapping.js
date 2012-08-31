@@ -372,7 +372,7 @@ AddRunModel.prototype.createMap = function (mapEl) {
 AddRunModel.createLoginPromptDialog = function (elementId) {
     return $(elementId).dialog({
         height: 280,
-        width: 400,
+        width: 320,
         modal: true,
         buttons: { OK: function () { $(this).dialog("close"); } },
         autoOpen: false

@@ -8,7 +8,7 @@
         $("#routeManagementOptions").accordion({ fillSpace: true, active: 2 });
         $("#routeManagement").resizable({ minHeight: 250, handles: "s", resize: function () { $("#routeManagementOptions").accordion("resize"); }, alsoResize: "#mapDiv" });
 
-        var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 400, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
+        var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 320, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
 
         var routeModel = new RouteDisplayModel();
         routeModel.createMap('#mapDiv');

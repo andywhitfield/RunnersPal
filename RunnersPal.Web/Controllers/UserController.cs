@@ -82,7 +82,7 @@ namespace RunnersPal.Web.Controllers
                 Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
-                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
+                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData, string>)DistanceAndPaceOfLogEvent(e) });
                 var groupedByWeek = datesAndDistances
                     .GroupBy(d => WeekEnding(d.Date))
                     .OrderBy(g => g.Key);
@@ -113,7 +113,7 @@ namespace RunnersPal.Web.Controllers
                 Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
-                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
+                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData, string>)DistanceAndPaceOfLogEvent(e) });
                 var groupedByMonth = datesAndDistances
                     .GroupBy(d => new DateTime(d.Date.Year, d.Date.Month, 1))
                     .OrderBy(g => g.Key);
@@ -144,7 +144,7 @@ namespace RunnersPal.Web.Controllers
                 Trace.TraceInformation("Loaded {0} run log events", runEvents.Count());
                 if (!runEvents.Any()) return;
 
-                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData>)DistanceAndPaceOfLogEvent(e) });
+                var datesAndDistances = runEvents.Select(e => new { Date = (DateTime)e.Date, DistanceAndPace = (Tuple<Distance, PaceData, string>)DistanceAndPaceOfLogEvent(e) });
                 var groupedByYear = datesAndDistances
                     .GroupBy(d => new DateTime(d.Date.Year, 1, 1))
                     .OrderBy(g => g.Key);

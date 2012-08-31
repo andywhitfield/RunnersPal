@@ -119,7 +119,7 @@ LoginAccountModel.prototype.initElements = function () {
 
     var loginHelpDlg = $("#loginHelpDialog").dialog({
         height: 350,
-        width: 450,
+        width: 320,
         modal: true,
         buttons: { OK: function () { $(this).dialog("close"); } },
         autoOpen: false
@@ -130,7 +130,7 @@ LoginAccountModel.prototype.initElements = function () {
 
     var loginErrorDialog = $('#loginErrorDialog').dialog({
         height: 350,
-        width: 450,
+        width: 320,
         modal: true,
         buttons: { OK: function () { $(this).dialog("close"); self.showLoginDialog(); } },
         autoOpen: false

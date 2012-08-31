@@ -254,6 +254,7 @@
     <Content Include="Scripts\knockout-2.1.0.debug.js" />
     <Content Include="Scripts\knockout-2.1.0.js" />
     <Content Include="Scripts\latlon.js" />
+    <Content Include="Scripts\respond.min.js" />
     <Content Include="Scripts\runnerspal-maproute.js" />
     <Content Include="Scripts\modernizr-2.5.3.js" />
     <Content Include="Scripts\runnerspal-models.js" />
