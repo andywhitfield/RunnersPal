@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Web Developer Express 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RunnersPal.Web", "RunnersPal.Web\RunnersPal.Web.csproj", "{4D7773D5-3673-4CC2-AC11-DB7ACF1F6413}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RunnersPal", "RunnersPal\RunnersPal.csproj", "{75D387CE-87ED-4FA3-B9C5-CEE3B41B3F09}"

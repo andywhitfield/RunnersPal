@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -15,6 +16,15 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <MvcBuildViews>false</MvcBuildViews>
     <UseIISExpress>false</UseIISExpress>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>4.0</OldToolsVersion>
+    <IISExpressSSLPort />
+    <IISExpressAnonymousAuthentication />
+    <IISExpressWindowsAuthentication />
+    <IISExpressUseClassicPipelineMode />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -238,27 +248,27 @@
     <Content Include="Content\yahoo.ico.png" />
     <Content Include="Global.asax" />
     <Content Include="README.jQuery.vsdoc.txt" />
-    <Content Include="Scripts\exporting.js" />
-    <Content Include="Scripts\fullcalendar.js" />
-    <Content Include="Scripts\fullcalendar.min.js" />
-    <Content Include="Scripts\geo.js" />
-    <Content Include="Scripts\highcharts.js" />
-    <Content Include="Scripts\jquery-1.7.2-vsdoc.js" />
-    <Content Include="Scripts\jquery-1.7.2.js" />
-    <Content Include="Scripts\jquery-1.7.2.min.js" />
-    <Content Include="Scripts\jquery-ui-1.8.19.js" />
-    <Content Include="Scripts\jquery-ui-1.8.19.min.js" />
-    <Content Include="Scripts\jquery.validate-vsdoc.js" />
-    <Content Include="Scripts\jquery.validate.js" />
-    <Content Include="Scripts\jquery.validate.min.js" />
-    <Content Include="Scripts\knockout-2.1.0.debug.js" />
-    <Content Include="Scripts\knockout-2.1.0.js" />
-    <Content Include="Scripts\latlon.js" />
-    <Content Include="Scripts\respond.min.js" />
-    <Content Include="Scripts\runnerspal-maproute.js" />
-    <Content Include="Scripts\modernizr-2.5.3.js" />
-    <Content Include="Scripts\runnerspal-models.js" />
-    <Content Include="Scripts\runnerspal-routemapping.js" />
+    <Content Include="Models\Scripts\exporting.js" />
+    <Content Include="Models\Scripts\fullcalendar.js" />
+    <Content Include="Models\Scripts\fullcalendar.min.js" />
+    <Content Include="Models\Scripts\geo.js" />
+    <Content Include="Models\Scripts\highcharts.js" />
+    <Content Include="Models\Scripts\jquery-1.7.2-vsdoc.js" />
+    <Content Include="Models\Scripts\jquery-1.7.2.js" />
+    <Content Include="Models\Scripts\jquery-1.7.2.min.js" />
+    <Content Include="Models\Scripts\jquery-ui-1.8.19.js" />
+    <Content Include="Models\Scripts\jquery-ui-1.8.19.min.js" />
+    <Content Include="Models\Scripts\jquery.validate-vsdoc.js" />
+    <Content Include="Models\Scripts\jquery.validate.js" />
+    <Content Include="Models\Scripts\jquery.validate.min.js" />
+    <Content Include="Models\Scripts\knockout-2.1.0.debug.js" />
+    <Content Include="Models\Scripts\knockout-2.1.0.js" />
+    <Content Include="Models\Scripts\latlon.js" />
+    <Content Include="Models\Scripts\respond.min.js" />
+    <Content Include="Models\Scripts\runnerspal-maproute.js" />
+    <Content Include="Models\Scripts\modernizr-2.5.3.js" />
+    <Content Include="Models\Scripts\runnerspal-models.js" />
+    <Content Include="Models\Scripts\runnerspal-routemapping.js" />
     <Content Include="unexpectederror.html" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config">
@@ -268,10 +278,10 @@
       <DependentUpon>Web.config</DependentUpon>
     </Content>
     <Content Include="Content\main.css" />
-    <Content Include="Scripts\jquery.unobtrusive-ajax.js" />
-    <Content Include="Scripts\jquery.unobtrusive-ajax.min.js" />
-    <Content Include="Scripts\jquery.validate.unobtrusive.js" />
-    <Content Include="Scripts\jquery.validate.unobtrusive.min.js" />
+    <Content Include="Models\Scripts\jquery.unobtrusive-ajax.js" />
+    <Content Include="Models\Scripts\jquery.unobtrusive-ajax.min.js" />
+    <Content Include="Models\Scripts\jquery.validate.unobtrusive.js" />
+    <Content Include="Models\Scripts\jquery.validate.unobtrusive.min.js" />
     <Content Include="Views\_ViewStart.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
@@ -322,8 +332,13 @@
   <ItemGroup>
     <Content Include="Views\User\Profile.cshtml" />
   </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+  </PropertyGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
+  <Import Project="$(VSToolsPath)\WebApplications\Microsoft.WebApplication.targets" Condition="'$(VSToolsPath)' != ''" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" Condition="false" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
