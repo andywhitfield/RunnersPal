@@ -62,7 +62,7 @@ namespace RunnersPal.Web.Controllers
             csv += string.Join(Environment.NewLine, runEvents
                 .OrderBy(e => e.Date)
                 .Select(e => new { Date = (DateTime)e.Date, TimeTaken = (string)e.TimeTaken, Comment = CsvSafeString(e.Comment), DistanceAndPace = (Tuple<Distance, PaceData, string>)DistanceAndPaceOfLogEvent(e) })
-                .Select(d => string.Format("{0},{1},{2},{3},\"{4}\",{5}", d.Date.ToString("yyyy-MM-dd"), d.DistanceAndPace.Item1.BaseDistance, d.TimeTaken, d.DistanceAndPace.Item2.Pace, d.DistanceAndPace.Item3, d.Comment)));
+                .Select(d => string.Format("{0},{1},{2},{3},\"{4}\",\"{5}\"", d.Date.ToString("yyyy-MM-dd"), d.DistanceAndPace.Item1.BaseDistance, d.TimeTaken, d.DistanceAndPace.Item2.Pace, d.DistanceAndPace.Item3, d.Comment)));
             
             return File(Encoding.UTF8.GetBytes(csv), "text/csv", "runlogevents.csv");
         }
