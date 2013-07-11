@@ -409,6 +409,7 @@ input.loginYahoo { background-image: url(yahoo.ico.png); background-repeat: no-r
 input.loginAOL { background-image: url(aol.ico.png); background-repeat: no-repeat; background-position: left; }
 input.loginMyOpenId { background-image: url(myopenid.ico.png); background-repeat: no-repeat; background-position: left; }
 input.loginOpenId { background-image: url(openid.ico.png); background-repeat: no-repeat; background-position: left; }
+input.loginSymantec { background-image: url(symantec.ico.png); background-repeat: no-repeat; background-position: left; }
 
 .distanceMarker div { color: black !important; }
 span.toggleDistUnits { text-decoration: underline; cursor: pointer; }
