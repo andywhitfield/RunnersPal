@@ -197,8 +197,20 @@ AddRunModel.prototype.fetchMyRoutes = function () {
 AddRunModel.prototype.addRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
+
+    var daysOfTheWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    var monthsOfTheYear = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+    // format the date as: ddd, d MMM yyyy HH:mm:ss UTC
+    var formattedEventDate =
+        daysOfTheWeek[eventDate.getDay()] + ', ' +
+        eventDate.getDate() + ' ' +
+        monthsOfTheYear[eventDate.getMonth()] + ' ' +
+        eventDate.getFullYear() + ' ' +
+        '00:00:00 UTC';
+
     var routeId = self.route();
-    $.post(Models.urls.addRun, { date: eventDate.toUTCString(), distance: self.distance(),
+    $.post(Models.urls.addRun, { date: formattedEventDate, distance: self.distance(),
         route: routeId, time: self.time(), comment: self.comment(),
         newRouteName: self.mapping.routeName(), newRouteNotes: self.mapping.routeNotes(),
         newRoutePublic: self.mapping.routePublic(), newRoutePoints: self.mapping.pointsToJson()
