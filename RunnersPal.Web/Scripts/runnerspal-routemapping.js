@@ -345,8 +345,7 @@ AddRunModel.prototype.createMap = function (mapEl) {
     var self = this;
     if (typeof (Microsoft) != "undefined") {
         var map = new Microsoft.Maps.Map(mapEl[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
-        Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
-            e.handled = true;
+        Microsoft.Maps.Events.addHandler(map, 'click', function (e) {
             self.mapping.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
         });
         map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });
@@ -600,8 +599,7 @@ RouteDisplayModel.prototype.createMap = function (mapDiv) {
     var self = this;
     if (typeof (Microsoft) != "undefined") {
         var map = new Microsoft.Maps.Map($(mapDiv)[0], { credentials: 'AtLqRCQQxDJwOrx97DYR_g9vQn2jgCO6doHIgnpNK13kHPzjLPigtEPjNDzv4Uuh' });
-        Microsoft.Maps.Events.addHandler(map, 'dblclick', function (e) {
-            e.handled = true;
+        Microsoft.Maps.Events.addHandler(map, 'click', function (e) {
             self.addRoutePoint(map.tryPixelToLocation(new Microsoft.Maps.Point(e.getX(), e.getY())));
         });
         map.setView({ zoom: 5, center: new Microsoft.Maps.Location(55, 0) });

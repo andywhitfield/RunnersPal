@@ -41,11 +41,11 @@ MapPoint.prototype.toLatLon = function () { return new LatLon(this._lat, this._l
 */
 MapPoint.prototype.createPushpin = function () {
     if (this._pointType == 's') // start
-        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { icon: 'Content/pushpin-green.png', width: 23, height: 36 });
+        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { color: 'green' });
     if (this._pointType == 'e') // end
-        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { icon: 'Content/pushpin-red.png', width: 23, height: 36 });
+        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { color: 'red' });
     if (this._pointType == 'm') // distance marker
-        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { icon: 'Content/pushpin-white.png', width: 23, height: 36, text: this._text, typeName: 'distanceMarker' })
+        return new Microsoft.Maps.Pushpin(this.toMapsLocation(), { color: 'black', text: this._text })
     // this._pointType == 'p' - a point: no pushpin to create
     return null;
 }

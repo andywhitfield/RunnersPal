@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0">
     <title>@ViewBag.Title | Runners:Pal</title>
     <link href="@Url.Content("~/Content/main.css")" rel="stylesheet" type="text/css" />
@@ -56,17 +56,6 @@
             unitsModel.kmName = '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a"))';
             unitsModel.kmSingular = '@(RunnersPal.DistanceUnits.Kilometers.UnitsToString("a.s"))';
         });
-
-        var _gaq = _gaq || [];
-        _gaq.push(['_setAccount', 'UA-9144652-4']);
-        _gaq.push(['_setDomainName', 'runnerspal.co.uk']);
-        _gaq.push(['_trackPageview']);
-
-        (function () {
-            var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-            ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-            var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-        })();
     </script>
 </head>
 <body>
@@ -144,7 +133,29 @@
     </footer>
 
     @if (!ViewContext.HasValidUserAccount()) {
-    <div id="loginHelpDialog" title="Login Help">        <p>        It only takes a few moments to login or create an account. If you've        <strong>previously created an account</strong> on runners:pal, simply click on        either Google, Twitter, Yahoo, or MyOpenID to re-enter your password.        </p>        <p>        For <strong>new users</strong>, use or create an account from one of        Google, Twitter, Yahoo, or MyOpenID. Once you've logged in you there, you        will be returned to runners:pal and we will simply ask for your name.        That's it.        </p>        <p>        <i>More</i>: We use <a href="http://openid.net/" target="_blank">OpenID</a> - which means        we don't know or store your username or password - you login        securely on the Google/Twitter/Yahoo/MyOpenID site. We don't have access        to your email address (i.e. we don't know your gmail address).        </p>        <p>        If you have an alternative OpenID, simple click the <i>Other</i> button        and then enter your custom OpenID URL.        </p>    </div>
+    <div id="loginHelpDialog" title="Login Help">
+        <p>
+        It only takes a few moments to login or create an account. If you've
+        <strong>previously created an account</strong> on runners:pal, simply click on
+        either Google, Twitter, Yahoo, or MyOpenID to re-enter your password.
+        </p>
+        <p>
+        For <strong>new users</strong>, use or create an account from one of
+        Google, Twitter, Yahoo, or MyOpenID. Once you've logged in you there, you
+        will be returned to runners:pal and we will simply ask for your name.
+        That's it.
+        </p>
+        <p>
+        <i>More</i>: We use <a href="http://openid.net/" target="_blank">OpenID</a> - which means
+        we don't know or store your username or password - you login
+        securely on the Google/Twitter/Yahoo/MyOpenID site. We don't have access
+        to your email address (i.e. we don't know your gmail address).
+        </p>
+        <p>
+        If you have an alternative OpenID, simple click the <i>Other</i> button
+        and then enter your custom OpenID URL.
+        </p>
+    </div>
 
     <div id="loginErrorDialog" title="Login Error">
         <p><strong>Sorry!</strong></p>

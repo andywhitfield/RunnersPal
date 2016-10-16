@@ -3,7 +3,7 @@
     ViewBag.Title = "Run:Log";
     ViewBag.SelectedTab = "RunLog";
     ViewBag.Stylesheets = new[] { "~/Content/fullcalendar.css" };
-    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-routemapping.js", "~/Scripts/runnerspal-maproute.js", "http://ecn.dev.virtualearth.net/mapcontrol/mapcontrol.ashx?v=7.0" };
+    ViewBag.Scripts = new[] { "~/Scripts/fullcalendar.min.js", "http://www.bing.com/api/maps/mapcontrol", "~/Scripts/latlon.js", "~/Scripts/geo.js", "~/Scripts/runnerspal-routemapping.js", "~/Scripts/runnerspal-maproute.js" };
 }
 <script type="text/javascript">
     $(function () {
@@ -108,7 +108,7 @@
 	                </div>
 	                <h3 id="tabMapNewRoute"><a>Map a new route</a></h3>
 	                <div>
-                        <div style="position: relative; float: right; z-index: 10; background-color: #efefef; width: 180px; padding: 5px;">
+                        <div style="position: relative; float: left; z-index: 10; background-color: #efefef; width: 180px; padding: 5px;">
                             <button id="routeNew" title="Clear all the points and start a new route">New</button>
                             <button id="routeUndo" data-bind="buttonEnabled: mapping.allowUndo()" title="Undo the last point added to the route">Undo</button>
 
