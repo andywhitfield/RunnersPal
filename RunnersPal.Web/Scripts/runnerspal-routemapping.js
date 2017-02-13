@@ -1,11 +1,4 @@
-﻿Date.prototype.yyyymmdd = function() { 
-    var yyyy = this.getFullYear().toString();
-    var mm = (this.getMonth()+1).toString();
-    var dd  = this.getDate().toString();
-    return yyyy + '-' + (mm[1]?mm:"0"+mm[0]) + '-' + (dd[1]?dd:"0"+dd[0]);
-};
-
-var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
+﻿var kmUnitMultiplier = function() { return unitsModel.currentSingularUnitsName == 'mile' ? 1 / 1.609344 : 1; };
 
 function MyRouteModel(owner, id, name, distance, lastRunOn, notes, lastRunBy) {
     var self = this;
@@ -135,7 +128,7 @@ function AddRunModel() {
     var self = this;
     this.runLogId = ko.observable(-1);
     this.eventDate = ko.observable();
-    this.runDate = ko.computed(function () { return self.eventDate() ? self.eventDate().toLocaleDateString() : ""; });
+    this.runDate = ko.computed(function () { return self.eventDate() ? self.eventDate().format("dddd, Do MMMM YYYY") : ""; });
     this.route = ko.observable(0);
     this.routeType = ko.observable("");
     this.distance = ko.observable("0");
@@ -160,7 +153,7 @@ function AddRunModel() {
     this.calories = ko.observable("0");
     this.caloriesCalc = ko.computed(function () {
         if (!this.eventDate()) return;
-        $.post(Models.urls.autoCalcCalories, { date: this.eventDate().toUTCString(), route: this.route(), distance: this.distance() },
+        $.post(Models.urls.autoCalcCalories, { date: this.eventDate().toDate().toUTCString(), route: this.route(), distance: this.distance() },
             function (result) {
                 if (!result.Result) return;
                 self.calories(result.Calories);
@@ -198,16 +191,8 @@ AddRunModel.prototype.addRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
 
-    var daysOfTheWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    var monthsOfTheYear = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
     // format the date as: ddd, d MMM yyyy HH:mm:ss UTC
-    var formattedEventDate =
-        daysOfTheWeek[eventDate.getDay()] + ', ' +
-        eventDate.getDate() + ' ' +
-        monthsOfTheYear[eventDate.getMonth()] + ' ' +
-        eventDate.getFullYear() + ' ' +
-        '00:00:00 UTC';
+    var formattedEventDate = eventDate.format("ddd, D MMM YYYY") + ' 00:00:00 UTC';
 
     var routeId = self.route();
     $.post(Models.urls.addRun, { date: formattedEventDate, distance: self.distance(),
@@ -230,7 +215,7 @@ AddRunModel.prototype.addRun = function (calendar, addRunDialog) {
 AddRunModel.prototype.updateRun = function (calendar, addRunDialog) {
     var self = this;
     var eventDate = self.eventDate();
-    $.post(Models.urls.updateRun, { runLogId: self.runLogId(), date: eventDate.toUTCString(), distance: self.distance(), route: self.route(), time: self.time(), comment: self.comment() },
+    $.post(Models.urls.updateRun, { runLogId: self.runLogId(), date: eventDate.toDate().toUTCString(), distance: self.distance(), route: self.route(), time: self.time(), comment: self.comment() },
         function (result) {
             if (!result.Completed) {
                 alert('Could not update this event\n\n' + result.Reason);
@@ -243,7 +228,6 @@ AddRunModel.prototype.updateRun = function (calendar, addRunDialog) {
 }
 AddRunModel.prototype.deleteRun = function (calendar, addRunDialog) {
     var self = this;
-    var eventDate = self.eventDate();
     $.post(Models.urls.deleteRun, { runLogId: self.runLogId() },
         function (result) {
             if (!result.Completed) {
@@ -280,7 +264,8 @@ AddRunModel.prototype.createDistanceSelection = function (accordianEl, commonRou
     var self = this;
     accordianEl.accordion({
         autoHeight: false,
-        navigation: true
+        navigation: true,
+        heightStyle: "content"
     }).bind('accordionchange', function (event, ui) {
         if (self.beginEdit) {
             self.beginEdit = false;
@@ -399,12 +384,13 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
         firstDay: 1,
         selectable: true,
         selectHelper: false,
-        select: function (start, end, allDay) {
+        displayEventTime: false,
+        dayClick: function (start, evt, view) {
             if (!loginAccountModel.isLoggedIn) {
                 loginPromptDialog.dialog('open');
                 loginPromptDialog.bind('dialogclose', function () {
                     loginAccountModel.showLoginDialog();
-                    loginAccountModel.returnPage = Models.urls.runLog + start.yyyymmdd();
+                    loginAccountModel.returnPage = Models.urls.runLog + start.format("YYYY-MM-DD");
                     loginPromptDialog.unbind('dialogclose');
                 });
             } else {
@@ -425,7 +411,7 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
             }
             $(this).fullCalendar('unselect');
         },
-        eventClick: function (evt) {
+        eventClick: function (evt, jsEvt, view) {
             $.post(Models.urls.viewRunLog, { runlogid: evt.id },
                         function (result) {
                             if (!result.Completed) {
@@ -443,7 +429,7 @@ AddRunModel.createCalendar = function (elementId, addRunModel, loginPromptDialog
                                 $(window).scrollTop(0);
                             });
                             addRunModel.runLogId(result.id);
-                            addRunModel.eventDate(new Date(result.date));
+                            addRunModel.eventDate(moment(new Date(result.date)));
                             addRunModel.distance(result.distance);
                             addRunModel.pace(result.pace);
                             addRunModel.time(result.time);
@@ -463,8 +449,8 @@ AddRunModel.checkAddEvent = function (loginAccountModel, calendar) {
     var hashItem = window.location.hash;
     if (hashItem.indexOf("#addEvent=") == 0) {
         if (!loginAccountModel.loginError) {
-            var eventDate = new Date(parseInt(hashItem.substring(10, 14)), parseInt(hashItem.substring(15, 17), 10) - 1, parseInt(hashItem.substring(18, 20), 10));
-            calendar.fullCalendar('select', eventDate, eventDate, 1);
+            var eventDate = moment(new Date(parseInt(hashItem.substring(10, 14)), parseInt(hashItem.substring(15, 17), 10) - 1, parseInt(hashItem.substring(18, 20), 10)));
+            calendar.fullCalendar('select', eventDate, eventDate);
         } else {
             loginAccountModel.returnPage = Models.urls.runLogBase + hashItem;
         }

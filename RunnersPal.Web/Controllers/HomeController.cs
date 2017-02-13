@@ -68,7 +68,7 @@ namespace RunnersPal.Web.Controllers
                     Session["login_service"] = "twitter";
                     try
                     {
-                        return TwitterLogin.StartSignInWithTwitter(false).AsActionResult();
+                        return TwitterLogin.StartSignInWithTwitter(false).AsActionResultMvc5();
                     }
                     catch (Exception ex)
                     {
@@ -83,7 +83,7 @@ namespace RunnersPal.Web.Controllers
                     {
                         try
                         {
-                            return openid.CreateRequest(Request.Form["openid_identifier"]).RedirectingResponse.AsActionResult();
+                            return openid.CreateRequest(Request.Form["openid_identifier"]).RedirectingResponse.AsActionResultMvc5();
                         }
                         catch (ProtocolException ex)
                         {

@@ -835,5 +835,6 @@ span.toggleDistUnits { text-decoration: underline; cursor: pointer; }
 span.toggleDistUnits:hover { text-decoration: none; cursor: pointer; }
 
 #calendar { min-width: 400px; }
-#routeManagement { min-width: 500px; height: 500px; }
+#routeManagement { min-width: 500px; height: 1500px; }
+#routeManagementOptions { height: 1500px; }
 }

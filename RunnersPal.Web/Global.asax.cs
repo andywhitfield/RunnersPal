@@ -74,6 +74,7 @@ namespace RunnersPal.Web
                 app.Request["HTTP_X_MICROSOFTAJAX"] != null)
                 return;
 
+            /*
             if (acceptEncoding.Contains("deflate") || acceptEncoding == "*")
             {
                 // deflate
@@ -86,6 +87,7 @@ namespace RunnersPal.Web
                 app.Response.Filter = new GZipStream(prevUncompressedStream, CompressionMode.Compress);
                 app.Response.AppendHeader("Content-Encoding", "gzip");
             }
+            */
         }
     }
 }

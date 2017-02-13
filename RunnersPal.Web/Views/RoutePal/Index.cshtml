@@ -5,8 +5,8 @@
 }
 <script type="text/javascript">
     $(function () {
-        $("#routeManagementOptions").accordion({ fillSpace: true, active: 2 });
-        $("#routeManagement").resizable({ minHeight: 250, handles: "s", resize: function () { $("#routeManagementOptions").accordion("resize"); }, alsoResize: "#mapDiv" });
+        $("#routeManagementOptions").accordion({ heightStyle: "fill", active: 2 });
+        $("#routeManagement").resizable({ minHeight: 350, handles: "s", resize: function () { $("#routeManagementOptions").accordion("refresh"); }, alsoResize: "#mapDiv" });
 
         var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 320, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
 
