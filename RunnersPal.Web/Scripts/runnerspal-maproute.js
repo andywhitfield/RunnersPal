@@ -158,7 +158,7 @@ MapRoute.prototype.addPoint = function (location) {
         this._points.push(distMarker);
     }
 
-    this._map.entities.push(new Microsoft.Maps.Polyline([priorPoint.toMapsLocation(), location], null));
+    this._map.entities.push(new Microsoft.Maps.Polyline([priorPoint.toMapsLocation(), location], {strokeThickness: 2}));
     this._points.push(loc);
 
     loc = new MapPoint(location.latitude, location.longitude, 'e');

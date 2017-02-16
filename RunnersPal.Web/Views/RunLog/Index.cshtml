@@ -107,7 +107,7 @@
                     </form>
 	                </div>
 	                <h3 id="tabMapNewRoute"><a>Map a new route</a></h3>
-	                <div>
+	                <div style="height:400px;">
                         <div style="position: relative; float: left; z-index: 10; background-color: #efefef; width: 180px; padding: 5px;">
                             <button id="routeNew" title="Clear all the points and start a new route">New</button>
                             <button id="routeUndo" data-bind="buttonEnabled: mapping.allowUndo()" title="Undo the last point added to the route">Undo</button>
@@ -128,7 +128,7 @@
                                 <input type="checkbox" id="route-public" data-bind="checked: mapping.routePublic" title="If checked, allows everyone to view this route" />
                             </div>
                         </div>
-                        <div id="mapDiv" style="position:relative; width:auto; height:400px;"></div>
+                        <div id="mapDiv" style="position:relative;"></div>
 	                </div>
 	                <h3 id="enterManualDistance"><a>Enter a manual distance</a></h3>
 	                <div>

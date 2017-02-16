@@ -266,7 +266,7 @@ AddRunModel.prototype.createDistanceSelection = function (accordianEl, commonRou
         autoHeight: false,
         navigation: true,
         heightStyle: "content"
-    }).bind('accordionchange', function (event, ui) {
+    }).bind('accordionactivate', function (event, ui) {
         if (self.beginEdit) {
             self.beginEdit = false;
             return;
