@@ -7,34 +7,36 @@
 }
 <script type="text/javascript">
     $(function () {
-        var newRunModel = new AddRunModel();
-        var addRunDialog = $('#addRunDialog').hide();
-        var loginPromptDialog = AddRunModel.createLoginPromptDialog('#loginPromptDialog');
-        var calendar = AddRunModel.createCalendar('#calendar', newRunModel, loginPromptDialog, addRunDialog);
+        setTimeout(function() {
+	        var newRunModel = new AddRunModel();
+	        var addRunDialog = $('#addRunDialog').hide();
+	        var loginPromptDialog = AddRunModel.createLoginPromptDialog('#loginPromptDialog');
+	        var calendar = AddRunModel.createCalendar('#calendar', newRunModel, loginPromptDialog, addRunDialog);
 
-        newRunModel.createDistanceSelection($("#distanceSelection"), $('.distanceSelectionCommonRoutes > li > a'));
-        newRunModel.createMap($('#mapDiv'));
-        newRunModel.fetchMyRoutes();
+	        newRunModel.createDistanceSelection($("#distanceSelection"), $('.distanceSelectionCommonRoutes > li > a'));
+	        newRunModel.createMap($('#mapDiv'));
+	        newRunModel.fetchMyRoutes();
 
-        ko.applyBindings(newRunModel);
+	        ko.applyBindings(newRunModel);
 
-        $('#add-run-submit-button').click(function () { newRunModel.addRun(calendar, addRunDialog); });
-        $('#update-run-submit-button').click(function () { newRunModel.updateRun(calendar, addRunDialog); });
-        $('#delete-run-submit-button').click(function () { newRunModel.deleteRun(calendar, addRunDialog); });
-        $('#add-run-cancel-button').click(function () { addRunDialog.slideUp('fast'); });
+	        $('#add-run-submit-button').click(function () { newRunModel.addRun(calendar, addRunDialog); });
+	        $('#update-run-submit-button').click(function () { newRunModel.updateRun(calendar, addRunDialog); });
+	        $('#delete-run-submit-button').click(function () { newRunModel.deleteRun(calendar, addRunDialog); });
+	        $('#add-run-cancel-button').click(function () { addRunDialog.slideUp('fast'); });
 
-        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { newRunModel.startNew(); });
-        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { newRunModel.undo(); });
-        $('#findARoute').submit(function () { return newRunModel.find('#q'); });
-        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s"} });
-        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
+	        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { newRunModel.startNew(); });
+	        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { newRunModel.undo(); });
+	        $('#findARoute').submit(function () { return newRunModel.find('#q'); });
+	        $('#downloadRunLogEvents').button({ icons: { primary: "ui-icon-arrowthickstop-1-s"} });
+	        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
 
-        AddRunModel.checkAddEvent(loginAccountModel, calendar);
+	        AddRunModel.checkAddEvent(loginAccountModel, calendar);
 
-        unitsModel.change(function (u) {
-            calendar.fullCalendar('refetchEvents');
-            newRunModel.updateFromUnitsModel();
-        });
+	        unitsModel.change(function (u) {
+	            calendar.fullCalendar('refetchEvents');
+	            newRunModel.updateFromUnitsModel();
+	        });
+        }, 500);
     });
 </script>
 

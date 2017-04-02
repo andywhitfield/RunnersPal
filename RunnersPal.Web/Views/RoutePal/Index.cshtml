@@ -5,31 +5,33 @@
 }
 <script type="text/javascript">
     $(function () {
-        $("#routeManagementOptions").accordion({ heightStyle: "fill", active: 2 });
-        $("#routeManagement").resizable({ minHeight: 350, handles: "s", resize: function () { $("#routeManagementOptions").accordion("refresh"); }, alsoResize: "#mapDiv" });
+        setTimeout(function() {
+	        $("#routeManagementOptions").accordion({ heightStyle: "fill", active: 2 });
+	        $("#routeManagement").resizable({ minHeight: 350, handles: "s", resize: function () { $("#routeManagementOptions").accordion("refresh"); }, alsoResize: "#mapDiv" });
 
-        var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 320, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
+	        var loginPromptDialog = $("#loginPromptDialog").dialog({ height: 280, width: 320, modal: true, buttons: { OK: function () { $(this).dialog("close"); } }, autoOpen: false });
 
-        var routeModel = new RouteDisplayModel();
-        routeModel.createMap('#mapDiv');
+	        var routeModel = new RouteDisplayModel();
+	        routeModel.createMap('#mapDiv');
 
-        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { routeModel.newRoute(); });
-        $('#routeReset').button({ icons: { primary: "ui-icon-refresh" }, text: false }).click(function () { routeModel.resetRoute(); });
-        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { routeModel.undoLastPoint(); });
-        $('#routeSave').button({ icons: { primary: "ui-icon-circle-check" }, text: false }).click(function () { routeModel.saveRoute(loginPromptDialog); });
-        $('#routeDelete').button({ icons: { primary: "ui-icon-closethick" }, text: false }).click(function () { routeModel.deleteRoute(); });
-        $('#findARoute').submit(function () { return routeModel.findRoute($('#q').val()); });
-        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
+	        $('#routeNew').button({ icons: { primary: "ui-icon-newwin" }, text: false }).click(function () { routeModel.newRoute(); });
+	        $('#routeReset').button({ icons: { primary: "ui-icon-refresh" }, text: false }).click(function () { routeModel.resetRoute(); });
+	        $('#routeUndo').button({ icons: { primary: "ui-icon-arrowreturnthick-1-w" }, text: false }).click(function () { routeModel.undoLastPoint(); });
+	        $('#routeSave').button({ icons: { primary: "ui-icon-circle-check" }, text: false }).click(function () { routeModel.saveRoute(loginPromptDialog); });
+	        $('#routeDelete').button({ icons: { primary: "ui-icon-closethick" }, text: false }).click(function () { routeModel.deleteRoute(); });
+	        $('#findARoute').submit(function () { return routeModel.findRoute($('#q').val()); });
+	        $('.toggleDistUnits').click(function () { unitsModel.toggle(); });
 
-        ko.bindingHandlers.buttonEnabled = {
-            update: function (element, valueAccessor, allBindingsAccessor, viewModel) {
-                $(element).button(ko.utils.unwrapObservable(valueAccessor()) ? 'enable' : 'disable');
-            }
-        };
-        ko.applyBindings(routeModel);
-        unitsModel.change(function (u) { routeModel.updateFromUnitsModel(); });
+	        ko.bindingHandlers.buttonEnabled = {
+	            update: function (element, valueAccessor, allBindingsAccessor, viewModel) {
+	                $(element).button(ko.utils.unwrapObservable(valueAccessor()) ? 'enable' : 'disable');
+	            }
+	        };
+	        ko.applyBindings(routeModel);
+	        unitsModel.change(function (u) { routeModel.updateFromUnitsModel(); });
 
-        routeModel.loadMyRoutes(function () { routeModel.loadRequestedRoute(); });
+	        routeModel.loadMyRoutes(function () { routeModel.loadRequestedRoute(); });
+        }, 500);
     });
 </script>
 
